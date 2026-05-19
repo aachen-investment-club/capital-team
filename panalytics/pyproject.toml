@@ -1,13 +1,10 @@
 [project]
-name = "capital-team"
+name = "panalytics"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
-
-[tool.uv.workspace]
-members = [
-    "notion",
-    "panalytics",
-] 
+dependencies = [
+    "pandas>=3.0.3",
+    "streamlit>=1.57.0",
+]

@@ -1,5 +1,13 @@
 # Capital Team
 
+## Get started
+
+Install dependencies `uv sync`
+
+Add new packages: `uv add ...`
+
+`uv remove ...`
+
 ## Manage dependencies for new projects with uv
 
 ```
