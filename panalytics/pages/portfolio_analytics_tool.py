@@ -22,7 +22,7 @@ st.markdown(
 
 @st.cache_data
 def load_data():
-    trades = pd.read_csv("data/portfolio.csv", parse_dates=["date"])
+    trades = pd.read_csv("data/transactions.csv", parse_dates=["date"])
     trades["ticker"] = trades["ticker"].str.strip()
     close_prices = pd.read_csv("data/timeseries.csv", index_col=0, parse_dates=True)
     close_prices.index.name = "date"
@@ -117,6 +117,29 @@ def twr_returns(pv: pd.Series, cf: pd.Series) -> pd.Series:
         rets.append(r)
     return pd.Series(rets, index=pv.index[1:])
 
+def xirr(cashflows: pd.Series) -> float:
+    """Newton-Raphson solver for XIRR (annualised money-weighted return)."""
+    dates = cashflows.index
+    values = cashflows.values
+    days = np.array([(d - dates[0]).days for d in dates], dtype=float)
+
+    def npv(r: float) -> float:
+        return np.sum(values / (1 + r) ** (days / 365.0))
+
+    r = 0.1
+    for _ in range(200):
+        f = npv(r)
+        df = np.sum(-days / 365.0 * values / (1 + r) ** (days / 365.0 + 1))
+        if abs(df) < 1e-12:
+            break
+        r_new = r - f / df
+        r_new = max(r_new, -0.999)
+        if abs(r_new - r) < 1e-8:
+            r = r_new
+            break
+        r = r_new
+    return r
+
 port_returns = twr_returns(portfolio_value, trade_cashflows)
 
 rf = 0.035
@@ -130,6 +153,12 @@ cagr = (cum.iloc[-1] ** (252 / len(cum))) - 1
 downside_vol = port_returns[port_returns < 0].std() * np.sqrt(252)
 sortino = (ann_ret - rf) / downside_vol
 calmar = cagr / abs(mdd)
+
+# MWR (XIRR): negative cashflow = money invested, positive = proceeds + current value
+xirr_cf = -trades.groupby("date")["cashflow"].sum()
+xirr_cf[stock_prices.index[-1]] = current_value
+xirr_cf = xirr_cf.sort_index()
+mwr = xirr(xirr_cf)
 
 
 # ===== BENCHMARK =====
@@ -149,7 +178,7 @@ st.title("Portfolio Analytics")
 st.caption(f"Data as of {stock_prices.index[-1].date()}")
 
 # --- KPI Row 1 ---
-c1, c2, c3, c4, c5 = st.columns(5)
+c1, c2, c3, c4, c5, c6 = st.columns(6)
 with c1:
     st.metric("Total Invested", f"€{total_invested:,.0f}")
 with c2:
@@ -158,21 +187,23 @@ with c2:
 with c3:
     st.metric("Simple Return", f"{simple_return:.2%}")
 with c4:
-    st.metric("TWR (total)", f"{twr_total:.2%}")
+    st.metric("TWR", f"{twr_total:.2%}")
 with c5:
+    st.metric("MWR (XIRR)", f"{mwr:.2%}")
+with c6:
     st.metric("CAGR", f"{cagr:.2%}")
 
 # --- KPI Row 2 ---
-c6, c7, c8, c9, c10 = st.columns(5)
-with c6:
-    st.metric("Volatility (ann.)", f"{ann_vol:.2%}")
+c7, c8, c9, c10, c11 = st.columns(5)
 with c7:
-    st.metric("Sharpe Ratio", f"{sharpe:.2f}")
+    st.metric("Volatility (ann.)", f"{ann_vol:.2%}")
 with c8:
-    st.metric("Sortino Ratio", f"{sortino:.2f}")
+    st.metric("Sharpe Ratio", f"{sharpe:.2f}")
 with c9:
-    st.metric("Max Drawdown", f"{mdd:.2%}")
+    st.metric("Sortino Ratio", f"{sortino:.2f}")
 with c10:
+    st.metric("Max Drawdown", f"{mdd:.2%}")
+with c11:
     st.metric("Calmar Ratio", f"{calmar:.2f}")
 
 st.markdown("---")
