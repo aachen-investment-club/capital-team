@@ -1,6 +1,11 @@
+import pathlib
+
 import plotly.graph_objects as go
 import plotly.io as pio
 import streamlit as st
+
+_LOGO = str(pathlib.Path(__file__).parent.parent / "assets" / "logo-icon.png")
+FAVICON = _LOGO
 
 # ── Brand palette ────────────────────────────────────────────────────────────
 NAVY       = "#0C1E40"   # sidebar, headings
@@ -72,6 +77,7 @@ PNG_CONFIG = dict(
 # ── CSS injection ────────────────────────────────────────────────────────────
 def inject_css() -> None:
     """Call once per page in set_page_config() scope to apply the brand theme."""
+    st.logo(_LOGO, size='large')
     st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
