@@ -21,5 +21,5 @@ st.divider()
 st.markdown("""
 | Page | What it shows |
 |---|---|
-| **Returns & Weightings** | Portfolio vs benchmarks · single-position returns · daily weightings by basket · trade log |
+| **Performance** | Portfolio vs benchmarks · single-position returns · daily weightings by basket · trade log |
 """)
