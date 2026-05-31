@@ -51,6 +51,30 @@ def build_rolling_vol(returns: pd.DataFrame, window: int = 21) -> None:
     _write(long, "rolling_vol")
 
 
+def build_daily_weightings(
+    daily_positions: pd.DataFrame,
+    position_returns: pd.DataFrame,
+    instrument_metadata: pd.DataFrame,
+) -> None:
+    """Join daily positions with metadata and compute per-symbol since-inception cumulative returns."""
+    wide = position_returns.pivot(index="date", columns="symbol", values="daily_return")
+    cum = ((1 + wide).cumprod() - 1).reset_index().melt(
+        id_vars="date", var_name="symbol", value_name="cumulative_return"
+    )
+    df = (
+        daily_positions
+        .merge(cum, on=["date", "symbol"], how="left")
+        .merge(
+            instrument_metadata[["symbol", "name", "isin", "ccy", "category"]],
+            on="symbol", how="left",
+        )
+    )
+    _write(
+        df[["date", "symbol", "name", "isin", "ccy", "category", "pct_nav", "cumulative_return"]],
+        "daily_weightings",
+    )
+
+
 def build_factor_beta_history(betas: pd.DataFrame, returns: pd.DataFrame) -> None:
     """Placeholder: walks current betas through history with small random noise."""
     factor_cols = ["market_beta", "value_beta", "momentum_beta", "quality_beta"]
@@ -66,11 +90,15 @@ def main() -> None:
     print("Loading raw data …")
     returns = _read("returns")
     betas = _read("factor_betas")
+    daily_positions = _read("daily_positions")
+    position_returns = _read("position_returns")
+    instrument_metadata = _read("instrument_metadata")
 
     print("Computing derived tables:")
     build_cumulative_returns(returns)
     build_rolling_vol(returns)
     build_factor_beta_history(betas, returns)
+    build_daily_weightings(daily_positions, position_returns, instrument_metadata)
     print("Done.")
 
 
