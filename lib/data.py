@@ -8,11 +8,16 @@ import pathlib
 import duckdb
 import pandas as pd
 import streamlit as st
+from dotenv import load_dotenv
 
 _ROOT = pathlib.Path(__file__).resolve().parent.parent
-_S3_BUCKET = os.getenv("S3_BUCKET", "")
-_RAW_PREFIX = os.getenv("RAW_PREFIX", str(_ROOT / "data" / "raw"))
-_DERIVED_PREFIX = os.getenv("DERIVED_PREFIX", str(_ROOT / "data" / "derived"))
+load_dotenv(_ROOT / ".env")
+
+_S3_BUCKET      = os.getenv("S3_BUCKET", "")
+_RAW_PREFIX     = os.getenv("RAW_PREFIX",     "history/raw"     if _S3_BUCKET else str(_ROOT / "data" / "raw"))
+_DERIVED_PREFIX = os.getenv("DERIVED_PREFIX", "history/derived" if _S3_BUCKET else str(_ROOT / "data" / "derived"))
+_AWS_REGION     = os.getenv("AWS_REGION", "eu-central-1")
+_DDB_TABLE      = os.getenv("DDB_TABLE", "")
 
 
 def _path(prefix: str, table: str) -> str:
@@ -21,65 +26,47 @@ def _path(prefix: str, table: str) -> str:
     return f"{prefix}/{table}.parquet"
 
 
+def _glob(prefix: str, table: str) -> str:
+    if _S3_BUCKET:
+        return f"s3://{_S3_BUCKET}/{prefix}/{table}/**/*.parquet"
+    return f"{prefix}/{table}/**/*.parquet"
+
+
 @st.cache_resource
 def _con() -> duckdb.DuckDBPyConnection:
     con = duckdb.connect(":memory:")
     if _S3_BUCKET:
         con.execute("INSTALL httpfs; LOAD httpfs;")
-        region = os.getenv("AWS_REGION", "us-east-1")
-        con.execute(f"SET s3_region='{region}';")
+        con.execute(f"SET s3_region='{_AWS_REGION}';")
+        access_key = os.getenv("AWS_ACCESS_KEY_ID")
+        secret_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+        if access_key and secret_key:
+            con.execute(f"SET s3_access_key_id='{access_key}';")
+            con.execute(f"SET s3_secret_access_key='{secret_key}';")
+            session_token = os.getenv("AWS_SESSION_TOKEN")
+            if session_token:
+                con.execute(f"SET s3_session_token='{session_token}';")
+        else:
+            import boto3
+            creds = boto3.Session().get_credentials()
+            if creds:
+                creds = creds.resolve()
+                con.execute(f"SET s3_access_key_id='{creds.access_key}';")
+                con.execute(f"SET s3_secret_access_key='{creds.secret_key}';")
+                if creds.token:
+                    con.execute(f"SET s3_session_token='{creds.token}';")
     return con
 
 
-@st.cache_data(ttl=3600)
-def get_returns(start_date: str | None = None, end_date: str | None = None) -> pd.DataFrame:
-    """Daily returns. Columns: date, ticker, daily_return."""
-    path = _path(_RAW_PREFIX, "returns")
-    clauses = ["1=1"]
-    if start_date:
-        clauses.append(f"date >= '{start_date}'")
-    if end_date:
-        clauses.append(f"date <= '{end_date}'")
-    where = " AND ".join(clauses)
-    return _con().execute(
-        f"SELECT date, ticker, daily_return FROM read_parquet('{path}') WHERE {where} ORDER BY date"
-    ).df()
-
-
-@st.cache_data(ttl=3600)
-def get_positions() -> pd.DataFrame:
-    """Current holdings. Columns: ticker, shares, price, weight, market_value."""
-    path = _path(_RAW_PREFIX, "positions")
-    return _con().execute(
-        f"SELECT ticker, shares, price, weight, market_value FROM read_parquet('{path}') ORDER BY weight DESC"
-    ).df()
-
-
-@st.cache_data(ttl=3600)
-def get_factor_betas() -> pd.DataFrame:
-    """Current factor exposures. Columns: ticker, market_beta, value_beta, momentum_beta, quality_beta."""
-    path = _path(_RAW_PREFIX, "factor_betas")
-    return _con().execute(
-        f"SELECT ticker, market_beta, value_beta, momentum_beta, quality_beta FROM read_parquet('{path}')"
-    ).df()
-
-
-@st.cache_data(ttl=3600)
-def get_trade_log() -> pd.DataFrame:
-    """Recent trades. Columns: date, ticker, action, shares, price, value."""
-    path = _path(_RAW_PREFIX, "trade_log")
-    return _con().execute(
-        f"SELECT date, symbol AS ticker, action, shares, price, value FROM read_parquet('{path}') ORDER BY date DESC"
-    ).df()
-
+# ── Performance page loaders ──────────────────────────────────────────────────
 
 @st.cache_data(ttl=3600)
 def get_portfolio_and_benchmarks() -> pd.DataFrame:
-    """Portfolio + benchmark daily index values.
+    """Portfolio + benchmark daily index values (normalised to 1.0 at inception).
     Columns: date, ticker, index_value, daily_return
-    ticker='PORTFOLIO' is the fund; SPY/QQQ/STOXX50/MSCI_WORLD are benchmarks.
+    ticker = 'PORTFOLIO' | 'SPX' | 'MSCI_WORLD' | 'MSCI_EUROPE' | '60_40'
     """
-    path = _path(_RAW_PREFIX, "portfolio_and_benchmarks")
+    path = _path(_DERIVED_PREFIX, "portfolio_and_benchmarks")
     return _con().execute(
         f"SELECT date, ticker, index_value, daily_return FROM read_parquet('{path}') ORDER BY ticker, date"
     ).df()
@@ -87,13 +74,15 @@ def get_portfolio_and_benchmarks() -> pd.DataFrame:
 
 @st.cache_data(ttl=3600)
 def get_daily_weightings_history() -> pd.DataFrame:
-    """Daily position weights with metadata and since-inception cumulative returns.
-    Columns: date, symbol, name, isin, ccy, category, pct_nav, cumulative_return
-    Built by precompute/build_derived.py — refresh nightly.
+    """Daily position weights + returns for all holdings including cash.
+    Columns: date, symbol, name, isin, ccy, category, pct_nav,
+             cumulative_return, daily_return
+    Built by precompute/build_derived.py — refresh with:
+        python -m precompute.build_derived
     """
     path = _path(_DERIVED_PREFIX, "daily_weightings")
     return _con().execute(
-        f"SELECT date, symbol, name, isin, ccy, category, pct_nav, cumulative_return"
+        f"SELECT date, symbol, name, isin, ccy, category, pct_nav, cumulative_return, daily_return"
         f" FROM read_parquet('{path}') ORDER BY symbol, date"
     ).df()
 
@@ -101,39 +90,58 @@ def get_daily_weightings_history() -> pd.DataFrame:
 @st.cache_data(ttl=300)
 def get_theme_mappings() -> pd.DataFrame:
     """Theme/basket assignment per symbol.
+    Reads from DynamoDB (fund-baskets) when DDB_TABLE is set,
+    otherwise falls back to category as proxy.
     Columns: symbol, theme
-    Reads from instrument_metadata; swap for a DynamoDB scan when DDB_TABLE is configured.
     """
-    path = _path(_RAW_PREFIX, "instrument_metadata")
-    return _con().execute(
-        f"SELECT symbol, theme FROM read_parquet('{path}')"
-    ).df()
+    if _DDB_TABLE:
+        return _theme_mappings_from_ddb()
+    return pd.DataFrame(columns=["symbol", "theme"])
 
+
+def _theme_mappings_from_ddb() -> pd.DataFrame:
+    import boto3
+    from boto3.dynamodb.conditions import Attr
+    ddb  = boto3.resource("dynamodb", region_name=_AWS_REGION)
+    tbl  = ddb.Table(_DDB_TABLE)
+    items: list[dict] = []
+    resp = tbl.scan(
+        FilterExpression=Attr("active").eq(True),
+        ProjectionExpression="symbol, theme",
+    )
+    items.extend(resp["Items"])
+    while "LastEvaluatedKey" in resp:
+        resp = tbl.scan(
+            FilterExpression=Attr("active").eq(True),
+            ProjectionExpression="symbol, theme",
+            ExclusiveStartKey=resp["LastEvaluatedKey"],
+        )
+        items.extend(resp["Items"])
+    return pd.DataFrame(items)[["symbol", "theme"]] if items else pd.DataFrame(columns=["symbol", "theme"])
+
+
+# ── IBKR trade log loader ─────────────────────────────────────────────────────
 
 @st.cache_data(ttl=3600)
-def get_performance_trade_log() -> pd.DataFrame:
-    """Full trade history ordered newest-first.
-    Columns: date, symbol, name, action, shares, price, value
+def get_trade_log() -> pd.DataFrame:
+    """Trade history from IBKR Flex Query, with same-day fills merged per symbol.
+    Fractional-share fills (0 commission) are combined with the main order so each
+    row represents one trade event, not individual broker fills.
+
+    Columns: trade_date, symbol, name, isin, currency, asset_type,
+             buy_sell, quantity, avg_price, proceeds, commission
     """
-    path = _path(_RAW_PREFIX, "trade_log")
-    return _con().execute(
-        f"SELECT date, symbol, name, action, shares, price, value FROM read_parquet('{path}') ORDER BY date DESC"
-    ).df()
-
-
-@st.cache_data(ttl=3600)
-def get_cumulative_returns() -> pd.DataFrame:
-    """Precomputed cumulative returns. Columns: date, ticker, cumulative_return."""
-    path = _path(_DERIVED_PREFIX, "cumulative_returns")
-    return _con().execute(
-        f"SELECT date, ticker, cumulative_return FROM read_parquet('{path}') ORDER BY date"
-    ).df()
-
-
-@st.cache_data(ttl=3600)
-def get_rolling_vol() -> pd.DataFrame:
-    """Precomputed 21-day rolling volatility (annualised). Columns: date, ticker, rolling_vol_21d."""
-    path = _path(_DERIVED_PREFIX, "rolling_vol")
-    return _con().execute(
-        f"SELECT date, ticker, rolling_vol_21d FROM read_parquet('{path}') ORDER BY date"
-    ).df()
+    from lib.ibkr import load_trade_log
+    raw = load_trade_log()
+    agg = (
+        raw.groupby(
+            ["trade_date", "symbol", "name", "isin", "currency", "asset_type", "buy_sell"],
+            as_index=False,
+        )
+        .agg(quantity=("quantity", "sum"),
+             proceeds=("proceeds", "sum"),
+             commission=("commission", "sum"))
+    )
+    # Average price per share (proceeds are negative for buys)
+    agg["avg_price"] = (-agg["proceeds"] / agg["quantity"]).round(4)
+    return agg.sort_values("trade_date", ascending=False).reset_index(drop=True)

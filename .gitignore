@@ -1,3 +1,6 @@
+# Lambda deployment artefacts
+lambda/**/*.zip
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
@@ -220,6 +223,15 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-data/
+# Ignore generated data files but track the IBKR XML source files.
+# Use glob patterns (not bare directory) so git can traverse into data/.
+data/*
+!data/ibkr/
+data/ibkr/*
+!data/ibkr/trade_log.xml
+!data/ibkr/prior_positions.xml
+!data/ibkr/open_positions/
+data/ibkr/open_positions/*
+!data/ibkr/open_positions/*.xml
 
 .DS_Store
