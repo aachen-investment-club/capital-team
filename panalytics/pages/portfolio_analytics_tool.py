@@ -19,20 +19,13 @@ st.markdown(
 
 
 # ===== DATA LOADING =====
-
-@st.cache_data
-def load_data():
-    trades = pd.read_csv("data/transactions.csv", parse_dates=["date"])
-    trades["ticker"] = trades["ticker"].str.strip()
-    close_prices = pd.read_csv("data/timeseries.csv", index_col=0, parse_dates=True)
-    close_prices.index.name = "date"
-    return trades, close_prices
-
-trades, close_prices = load_data()
+trades = pd.read_csv("data/transactions.csv", parse_dates=["date"])
+trades["ticker"] = trades["ticker"].str.strip()
+close_prices = pd.read_csv("data/timeseries.csv", index_col=0, parse_dates=True)
+close_prices.index.name = "date"
 
 
 # ===== BENCHMARKS =====
-
 BENCHMARK_COL = ".MIWO00000PUS"
 # Drop US market holidays (all stock prices NaN, but MSCI World may still have a value)
 stock_prices = close_prices.drop(columns=[BENCHMARK_COL]).dropna(how="all")
@@ -52,38 +45,42 @@ prices_long.columns = ["date", "ticker", "close"]
 
 
 # ===== TRADES =====
-
 trades = trades.merge(prices_long, on=["date", "ticker"])
 trades["cashflow"] = trades["units"] * trades["close"]
-total_invested = trades[trades["units"] > 0]["cashflow"].sum()
-# st.write(trades)
+total_buys = trades[trades["units"] > 0]["cashflow"].sum()
+total_sale_proceeds = -trades[trades["units"] < 0]["cashflow"].sum()
+net_invested = total_buys - total_sale_proceeds
+st.write(trades)
 
 
 # ===== CURRENT HOLDINGS =====
-
 holdings = trades.groupby("ticker")["units"].sum().reset_index()
 holdings = holdings[holdings["units"] > 0].copy()
 holdings["current_price"] = holdings["ticker"].map(stock_prices.iloc[-1])
 holdings["current_value"] = holdings["units"] * holdings["current_price"]
 # st.write(holdings)
 
-cost_basis = (
+# Average cost per unit (total buy cost / total units bought)
+avg_cost = (
     trades[trades["units"] > 0]
     .groupby("ticker")
-    .apply(lambda x: (x["units"] * x["close"]).sum(), include_groups=False)
-    .reset_index(name="cost_basis")
+    .apply(
+        lambda x: (x["units"] * x["close"]).sum() / x["units"].sum(),
+        include_groups=False,
+    )
+    .reset_index(name="avg_cost")
 )
-holdings = holdings.merge(cost_basis, on="ticker")
+holdings = holdings.merge(avg_cost, on="ticker")
+holdings["cost_basis"] = holdings["units"] * holdings["avg_cost"]
 holdings["pnl"] = holdings["current_value"] - holdings["cost_basis"]
 holdings["pnl_pct"] = holdings["pnl"] / holdings["cost_basis"]
 holdings["weight"] = holdings["current_value"] / holdings["current_value"].sum()
 
 current_value = holdings["current_value"].sum()
-simple_return = current_value / total_invested - 1
+simple_return = (current_value + total_sale_proceeds) / total_buys - 1
 
 
 # ===== PORTFOLIO VALUE OVER TIME =====
-
 first_trade_date = trades["date"].min()
 
 trade_shares = (
@@ -93,6 +90,7 @@ trade_shares = (
     .fillna(0)
     .cumsum()
 )
+st.write(trade_shares)
 
 trade_cashflows = (
     trades
@@ -106,8 +104,8 @@ portfolio_value = (stock_prices * trade_shares).sum(axis=1)
 portfolio_value = portfolio_value[portfolio_value.index >= first_trade_date]
 trade_cashflows = trade_cashflows[trade_cashflows.index >= first_trade_date]
 
-
 # ===== TWR & RISK METRICS =====
+rf = st.sidebar.number_input("Risk-free Rate (%)", value=3.5, step=0.1, format="%.2f") / 100
 
 def twr_returns(pv: pd.Series, cf: pd.Series) -> pd.Series:
     rets = []
@@ -142,7 +140,6 @@ def xirr(cashflows: pd.Series) -> float:
 
 port_returns = twr_returns(portfolio_value, trade_cashflows)
 
-rf = 0.035
 ann_vol = port_returns.std() * np.sqrt(252)
 ann_ret = port_returns.mean() * 252
 sharpe = (ann_ret - rf) / ann_vol
@@ -160,9 +157,7 @@ xirr_cf[stock_prices.index[-1]] = current_value
 xirr_cf = xirr_cf.sort_index()
 mwr = xirr(xirr_cf)
 
-
 # ===== BENCHMARK =====
-
 bm = benchmark_prices[benchmark_prices.index >= first_trade_date]
 bm_returns = bm.pct_change().dropna()
 bm_cum = (1 + bm_returns).cumprod()
@@ -171,18 +166,25 @@ common_idx = cum.index.intersection(bm_cum.index)
 cum_port = cum.reindex(common_idx)
 cum_bm = bm_cum.reindex(common_idx)
 
+# Align daily returns for beta/alpha
+r_p = port_returns.reindex(common_idx)
+r_b = bm_returns.reindex(common_idx)
+
+cov_matrix = np.cov(r_p, r_b)
+beta = cov_matrix[0, 1] / cov_matrix[1, 1]
+bm_ann_ret = bm_cum.iloc[-1] ** (252 / len(bm_cum)) - 1
+alpha = ann_ret - (rf + beta * (bm_ann_ret - rf))
 
 # ===== LAYOUT =====
-
 st.title("Portfolio Analytics")
 st.caption(f"Data as of {stock_prices.index[-1].date()}")
 
-# --- KPI Row 1 ---
+# ===== KPI Row 1 =====
 c1, c2, c3, c4, c5, c6 = st.columns(6)
 with c1:
-    st.metric("Total Invested", f"€{total_invested:,.0f}")
+    st.metric("Net Invested", f"€{net_invested:,.0f}")
 with c2:
-    delta_eur = current_value - total_invested
+    delta_eur = current_value - net_invested
     st.metric("Current Value", f"€{current_value:,.0f}", delta=f"€{delta_eur:,.0f}")
 with c3:
     st.metric("Simple Return", f"{simple_return:.2%}")
@@ -193,8 +195,8 @@ with c5:
 with c6:
     st.metric("CAGR", f"{cagr:.2%}")
 
-# --- KPI Row 2 ---
-c7, c8, c9, c10, c11 = st.columns(5)
+# ===== KPI Row 2 =====
+c7, c8, c9, c10, c11, c12, c13 = st.columns(7)
 with c7:
     st.metric("Volatility (ann.)", f"{ann_vol:.2%}")
 with c8:
@@ -205,10 +207,14 @@ with c10:
     st.metric("Max Drawdown", f"{mdd:.2%}")
 with c11:
     st.metric("Calmar Ratio", f"{calmar:.2f}")
+with c12:
+    st.metric("Beta", f"{beta:.2f}")
+with c13:
+    st.metric("Alpha (ann.)", f"{alpha:.2%}")
 
 st.markdown("---")
 
-# --- Portfolio Value & Allocation ---
+# ===== PORTFOLIO VALUE & ALLOCATION =====
 col_chart, col_pie = st.columns([2, 1])
 
 with col_chart:
@@ -243,7 +249,7 @@ with col_pie:
     )
     st.plotly_chart(fig_pie, use_container_width=True)
 
-# --- Cumulative Returns vs Benchmark ---
+# ===== CUMULATIVE RETURNS VS BENCHMARK =====
 st.subheader("Cumulative Returns vs MSCI World")
 fig_cum = go.Figure()
 fig_cum.add_trace(go.Scatter(
@@ -266,7 +272,7 @@ fig_cum.update_layout(
 )
 st.plotly_chart(fig_cum, use_container_width=True)
 
-# --- Drawdown ---
+# ===== DRAWDOWN =====
 st.subheader("Drawdown")
 drawdown = (cum - cum.cummax()) / cum.cummax() * 100
 fig_dd = go.Figure()
@@ -287,7 +293,7 @@ st.plotly_chart(fig_dd, use_container_width=True)
 
 st.markdown("---")
 
-# --- Holdings & Transactions ---
+# ===== HOLDINGS & TRANSACTIONS =====
 col_h, col_t = st.columns([3, 2])
 
 with col_h:
@@ -323,3 +329,5 @@ with col_t:
         use_container_width=True,
         hide_index=True,
     )
+
+# ===== STOCK CHART =====
