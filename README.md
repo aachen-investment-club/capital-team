@@ -43,8 +43,7 @@ capital-team/
 │                                      #              and daily_weightings from IBKR data
 │
 ├── lambda/
-│   ├── fund-data-ingestion/           # Fetches IBKR flex query → DynamoDB + S3
-│   └── fund-market-data/              # Reads DynamoDB → writes benchmark Parquet to S3
+│   └── fund-data-ingestion/           # Fetches IBKR flex query → DynamoDB + S3
 │
 ├── scripts/
 │   ├── ingest_ibkr_xml.py             # Parse local XML → data/ibkr/*.parquet
@@ -91,7 +90,7 @@ precompute/build_derived.py         ← run nightly (or manually)
 lib/data.py loaders  →  Streamlit pages
 ```
 
-In production, the AWS Lambda pipeline handles the daily update automatically:
+In production, the Lambda runs nightly and a manual precompute step keeps the derived tables fresh:
 
 ```
 fund-data-ingestion lambda  (nightly, IBKR flex query)
@@ -100,13 +99,12 @@ fund-data-ingestion lambda  (nightly, IBKR flex query)
     → daily_equity_positions/date=.../data.csv  (S3)
     → daily_fx_positions/date=.../data.csv      (S3)
 
-fund-market-data lambda  (triggered after ingestion)
-    → portfolio_and_benchmarks/date=.../data.parquet  (S3)
-
-precompute/build_derived.py  (scheduled, reads S3)
+precompute/build_derived.py  (run manually after new XML is ingested)
     → history/derived/daily_weightings.parquet  (S3)
     → history/derived/portfolio_and_benchmarks.parquet  (S3)
 ```
+
+> **Note:** A dedicated Lambda to trigger `build_derived` automatically is planned but not yet set up.
 
 **Golden rule:** pages import from `lib/` only — never touch DuckDB, boto3, or file paths directly.
 
