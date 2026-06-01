@@ -15,4 +15,5 @@ dependencies = [
     "yfinance>=1.4.1",
     "python-dotenv>=1.2.2",
     "botocore[crt]>=1.43.18",
+    "matplotlib>=3.10.9",
 ]
