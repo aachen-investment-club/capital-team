@@ -129,7 +129,7 @@ def get_trade_log() -> pd.DataFrame:
     row represents one trade event, not individual broker fills.
 
     Columns: trade_date, symbol, name, isin, currency, asset_type,
-             buy_sell, quantity, avg_price, proceeds, commission
+             buy_sell, quantity, entry_exit_price, effective_price, proceeds, commission
     """
     from lib.ibkr import load_trade_log
     raw = load_trade_log()
@@ -142,6 +142,8 @@ def get_trade_log() -> pd.DataFrame:
              proceeds=("proceeds", "sum"),
              commission=("commission", "sum"))
     )
-    # Average price per share (proceeds are negative for buys)
-    agg["avg_price"] = (-agg["proceeds"] / agg["quantity"]).round(4)
+    # Execution price per share (proceeds are negative for buys, positive for sells)
+    agg["entry_exit_price"] = (-agg["proceeds"] / agg["quantity"]).round(4)
+    # Effective price: execution price adjusted for transaction cost per share
+    agg["effective_price"] = ((-agg["proceeds"] + agg["commission"].abs()) / agg["quantity"]).round(4)
     return agg.sort_values("trade_date", ascending=False).reset_index(drop=True)

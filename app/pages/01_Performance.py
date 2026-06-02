@@ -571,7 +571,7 @@ with tab_w_theme:
     st.plotly_chart(fig, use_container_width=True, config=PNG_CONFIG)
 
 st.markdown('<div class="action-ghost">', unsafe_allow_html=True)
-clicked_pies = st.button("↓ Export to Downloads", key="export_pies_mpl")
+clicked_pies = st.button("Export for Portfolio Report", key="export_pies_mpl")
 st.markdown('</div>', unsafe_allow_html=True)
 if clicked_pies:
     try:
@@ -607,19 +607,19 @@ if df_month.empty:
 else:
     disp = df_month.copy()
     disp["trade_date"]  = disp["trade_date"].dt.strftime("%Y-%m-%d")
-    disp["quantity"]    = disp["quantity"].map("{:,.4f}".format)
-    disp["avg_price"]   = disp["avg_price"].map("{:,.4f}".format)
-    disp["proceeds"]    = disp["proceeds"].map("{:,.2f}".format)
-    disp["commission"]  = disp["commission"].map("{:,.2f}".format)
-    disp["asset_type"]  = disp["asset_type"].map({"COMMON": "Stock", "ETF": "ETF", "FX": "FX"})
+    disp["quantity"]         = disp["quantity"].map("{:,.4f}".format)
+    disp["entry_exit_price"] = disp["entry_exit_price"].map("{:,.4f}".format)
+    disp["effective_price"]  = disp["effective_price"].map("{:,.4f}".format)
+    disp["commission"]       = disp["commission"].map("{:,.2f}".format)
+    disp["asset_type"]       = disp["asset_type"].map({"COMMON": "Stock", "ETF": "ETF", "FX": "FX"})
     st.dataframe(
         disp.rename(columns={
             "trade_date": "Date", "symbol": "Symbol", "name": "Name", "isin": "ISIN",
             "currency": "CCY", "asset_type": "Type", "buy_sell": "Side",
-            "quantity": "Qty", "avg_price": "Avg Price",
-            "proceeds": "Total Cost", "commission": "Commission",
+            "quantity": "Qty", "entry_exit_price": "Entry/Exit Price",
+            "effective_price": "Effective Price", "commission": "Commission",
         }),
         use_container_width=True, hide_index=True,
         column_order=["Date", "Type", "Symbol", "ISIN", "Name", "CCY",
-                      "Side", "Qty", "Avg Price", "Total Cost", "Commission"],
+                      "Side", "Qty", "Entry/Exit Price", "Effective Price", "Commission"],
     )
