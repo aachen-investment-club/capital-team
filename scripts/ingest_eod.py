@@ -3,8 +3,8 @@
 EOD price backfill and incremental update via LSEG Data Library.
 
 Storage: hive-partitioned Parquet
-  local: {RAW_PREFIX}/eod_prices/security_id={id}/data.parquet
-  S3:    s3://{S3_BUCKET}/{RAW_PREFIX}/eod_prices/security_id={id}/data.parquet
+  local: data/eod_prices/security_id={id}/data.parquet
+  S3:    s3://{S3_BUCKET}/history/eod_prices/security_id={id}/data.parquet
 
 Universe: config/security_master.csv — add a row to extend; no code changes needed.
 
@@ -207,12 +207,12 @@ def _fetch_ric(ric: str, security_id: str, start: str, end: str) -> pd.DataFrame
 
 # ── Storage helpers ───────────────────────────────────────────────────────────
 
-def _local_path(raw_prefix: str, security_id: str) -> pathlib.Path:
-    return pathlib.Path(raw_prefix) / "eod_prices" / f"security_id={security_id}" / "data.parquet"
+def _local_path(eod_prefix: str, security_id: str) -> pathlib.Path:
+    return pathlib.Path(eod_prefix) / f"security_id={security_id}" / "data.parquet"
 
 
-def _s3_key(raw_prefix: str, security_id: str) -> str:
-    return f"{raw_prefix}/eod_prices/security_id={security_id}/data.parquet"
+def _s3_key(eod_prefix: str, security_id: str) -> str:
+    return f"{eod_prefix}/security_id={security_id}/data.parquet"
 
 
 def _read_existing_local(path: pathlib.Path) -> Optional[pd.DataFrame]:
@@ -248,17 +248,17 @@ def _write_parquet_s3(df: pd.DataFrame, s3_client, bucket: str, key: str) -> Non
     s3_client.put_object(Bucket=bucket, Key=key, Body=buf.getvalue())
 
 
-def _write_version(s3_client, s3_bucket: str, raw_prefix: str, max_date: str) -> None:
+def _write_version(s3_client, s3_bucket: str, eod_prefix: str, max_date: str) -> None:
     payload = json.dumps({
         "ingested_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "max_date": max_date,
     }).encode()
     if s3_bucket:
-        key = f"{raw_prefix}/eod_prices/_version.json"
+        key = f"{eod_prefix}/_version.json"
         s3_client.put_object(Bucket=s3_bucket, Key=key, Body=payload)
         log.info("Version file written → s3://%s/%s", s3_bucket, key)
     else:
-        p = pathlib.Path(raw_prefix) / "eod_prices" / "_version.json"
+        p = pathlib.Path(eod_prefix) / "_version.json"
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_bytes(payload)
         log.info("Version file written → %s", p)
@@ -303,7 +303,7 @@ def run(cfg: Config) -> None:
         log.info("Retrying %d failed security(s)", len(universe))
 
     s3_bucket  = os.getenv("S3_BUCKET", "")
-    raw_prefix = "history/raw" if s3_bucket else str(_ROOT / "data" / "raw")
+    eod_prefix = "history/eod_prices" if s3_bucket else str(_ROOT / "data" / "eod_prices")
     s3_client = None
     if s3_bucket:
         import boto3
@@ -343,9 +343,9 @@ def run(cfg: Config) -> None:
             # Determine fetch range from existing state
             existing: Optional[pd.DataFrame] = None
             if s3_bucket:
-                existing = _read_existing_s3(s3_client, s3_bucket, _s3_key(raw_prefix, sec_id))
+                existing = _read_existing_s3(s3_client, s3_bucket, _s3_key(eod_prefix, sec_id))
             else:
-                existing = _read_existing_local(_local_path(raw_prefix, sec_id))
+                existing = _read_existing_local(_local_path(eod_prefix, sec_id))
 
             if existing is not None and not existing.empty:
                 max_existing = str(existing["date"].max())
@@ -383,14 +383,14 @@ def run(cfg: Config) -> None:
 
                 # Write
                 if s3_bucket:
-                    key = _s3_key(raw_prefix, sec_id)
+                    key = _s3_key(eod_prefix, sec_id)
                     _write_parquet_s3(combined, s3_client, s3_bucket, key)
                     log.info(
                         "[OK]    %-6s (%s)  %d rows → s3://%s/%s",
                         ticker, sec_id, len(combined), s3_bucket, key,
                     )
                 else:
-                    local = _local_path(raw_prefix, sec_id)
+                    local = _local_path(eod_prefix, sec_id)
                     _write_parquet_local(combined, local)
                     log.info(
                         "[OK]    %-6s (%s)  %d rows → %s",
@@ -410,7 +410,7 @@ def run(cfg: Config) -> None:
 
     # Version file — update only when at least one security was written
     if max_dates and not cfg.dry_run:
-        _write_version(s3_client, s3_bucket, raw_prefix, max(max_dates))
+        _write_version(s3_client, s3_bucket, eod_prefix, max(max_dates))
 
     # Failures file
     if failed:

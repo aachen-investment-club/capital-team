@@ -15,7 +15,7 @@ _ROOT = pathlib.Path(__file__).resolve().parent.parent
 load_dotenv(_ROOT / ".env")
 
 _S3_BUCKET      = os.getenv("S3_BUCKET", "")
-_EOD_PREFIX     = "history/eod_prices"              if _S3_BUCKET else str(_ROOT / "data" / "raw")
+_EOD_PREFIX     = "history/eod_prices"              if _S3_BUCKET else str(_ROOT / "data" / "eod_prices")
 _PORTFOLIO_PREFIX = "history/portfolio/derived" if _S3_BUCKET else str(_ROOT / "data" / "derived")
 _AWS_REGION     = os.getenv("AWS_REGION", "eu-central-1")
 _DDB_TABLE      = os.getenv("DDB_TABLE", "")

@@ -28,7 +28,8 @@ capital-team/
 │   └── theme.py                        # Plotly "capital" template + brand CSS
 │
 ├── lambda/
-│   └── fund-data-ingestion/            # Nightly: IBKR flex query → nav_history.json + S3
+│   ├── fund-data-ingestion/            # Nightly: IBKR flex query → nav_history.json + S3
+│   └── fund-eod-ingestion/             # Nightly: LSEG batch EOD fetch → Parquet on S3
 │
 ├── scripts/
 │   ├── backfill_positions_to_s3.py     # Parse IBKR XML → build + upload portfolio JSON to S3
@@ -68,9 +69,12 @@ lib/data.py loaders  →  Streamlit pages
 
 config/security_master.csv
         │
-        ▼
-scripts/ingest_eod.py                        ← run daily
-        │  writes to S3: history/raw/eod_prices/security_id=.../data.parquet
+        ├──▶ lambda/fund-eod-ingestion  (nightly, automated)
+        │           │  single LSEG batch call for all securities
+        │           │  appends to history/eod_prices/security_id=.../data.parquet
+        │
+        └──▶ scripts/ingest_eod.py  (manual / backfill)
+                    │  same Parquet layout, per-security incremental
         ▼
 lib/data.py  get_eod_prices()  →  02_Equities.py
 ```
@@ -142,6 +146,33 @@ Copy `.env.example` to `.env`.
 | `uv run python scripts/ingest_eod.py --dry-run` | Preview what would be fetched |
 | `uv run python scripts/ingest_eod.py --retry-failures` | Retry securities from last failed run |
 | `uv run python scripts/lookup_rics.py` | Find correct LSEG RICs from ISINs in security_master.csv |
+
+---
+
+## Deploying fund-eod-ingestion Lambda
+
+```bash
+# 1. Upload the security master to S3 (Lambda reads it from there)
+aws s3 cp config/security_master.csv s3://aic-fund-public-data/config/security_master.csv
+
+# 2. Build and push the container image
+cd lambda/fund-eod-ingestion
+aws ecr create-repository --repository-name fund-eod-ingestion --region eu-central-1  # first time only
+ECR=<account-id>.dkr.ecr.eu-central-1.amazonaws.com
+aws ecr get-login-password | docker login --username AWS --password-stdin $ECR
+docker build -t fund-eod-ingestion .
+docker tag fund-eod-ingestion:latest $ECR/fund-eod-ingestion:latest
+docker push $ECR/fund-eod-ingestion:latest
+
+# 3. Set Lambda env vars in the AWS console:
+#    S3_BUCKET, AWS_REGION, LSEG_APP_KEY, LSEG_USERNAME, LSEG_PASSWORD
+#    (see .env.example for details)
+
+# 4. Schedule with EventBridge — daily after market close, e.g.:
+#    cron(0 21 ? * MON-FRI *)   ← 21:00 UTC / 22:00 CET on weekdays
+```
+
+When `config/security_master.csv` changes (new security added), re-upload to S3 — no container rebuild needed.
 
 ---
 
