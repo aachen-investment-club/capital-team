@@ -15,8 +15,8 @@ _ROOT = pathlib.Path(__file__).resolve().parent.parent
 load_dotenv(_ROOT / ".env")
 
 _S3_BUCKET      = os.getenv("S3_BUCKET", "")
-_RAW_PREFIX     = os.getenv("RAW_PREFIX",     "history"         if _S3_BUCKET else str(_ROOT / "data" / "raw"))
-_DERIVED_PREFIX = os.getenv("DERIVED_PREFIX", "history/portfolio/derived" if _S3_BUCKET else str(_ROOT / "data" / "derived"))
+_EOD_PREFIX     = "history/eod_prices"              if _S3_BUCKET else str(_ROOT / "data" / "raw")
+_PORTFOLIO_PREFIX = "history/portfolio/derived" if _S3_BUCKET else str(_ROOT / "data" / "derived")
 _AWS_REGION     = os.getenv("AWS_REGION", "eu-central-1")
 _DDB_TABLE      = os.getenv("DDB_TABLE", "")
 
@@ -55,7 +55,7 @@ def _con() -> duckdb.DuckDBPyConnection:
             else:
                 print("[data] WARNING: no credentials found")
     else:
-        print(f"[data] connecting DuckDB → local ({_DERIVED_PREFIX})")
+        print(f"[data] connecting DuckDB → local ({_PORTFOLIO_PREFIX})")
     return con
 
 
@@ -80,7 +80,7 @@ def get_portfolio_and_benchmarks() -> pd.DataFrame:
     Columns: date, ticker, index_value, daily_return
     ticker = 'PORTFOLIO' | 'SPX' | 'MSCI_WORLD' | 'MSCI_EUROPE' | '60_40'
     """
-    path = _path(_DERIVED_PREFIX, "portfolio_and_benchmarks", "json")
+    path = _path(_PORTFOLIO_PREFIX, "portfolio_and_benchmarks", "json")
     print(f"[data] loading portfolio_and_benchmarks from {path}")
     df = _con().execute(
         f"SELECT date, ticker, index_value, daily_return FROM read_json_auto('{path}') ORDER BY ticker, date"
@@ -97,7 +97,7 @@ def get_daily_weightings_history() -> pd.DataFrame:
     Built by precompute/build_derived.py — refresh with:
         python -m precompute.build_derived
     """
-    path = _path(_DERIVED_PREFIX, "daily_weightings", "json")
+    path = _path(_PORTFOLIO_PREFIX, "daily_weightings", "json")
     print(f"[data] loading daily_weightings from {path}")
     df = _con().execute(
         f"SELECT date, symbol, name, isin, ccy, category, pct_nav, cumulative_return, daily_return"
@@ -149,8 +149,8 @@ def _eod_path(security_id: str) -> str:
     """Return the Parquet path for one security's EOD partition."""
     partition = f"security_id={security_id}/data.parquet"
     if _S3_BUCKET:
-        return f"s3://{_S3_BUCKET}/{_RAW_PREFIX}/eod_prices/{partition}"
-    return str(pathlib.Path(_RAW_PREFIX) / "eod_prices" / partition)
+        return f"s3://{_S3_BUCKET}/{_EOD_PREFIX}/{partition}"
+    return str(pathlib.Path(_EOD_PREFIX) / partition)
 
 
 @st.cache_data(ttl=60)
@@ -167,11 +167,11 @@ def _eod_data_version() -> str:
             s3 = boto3.client("s3", region_name=_AWS_REGION)
             obj = s3.get_object(
                 Bucket=_S3_BUCKET,
-                Key=f"{_RAW_PREFIX}/eod_prices/_version.json",
+                Key=f"{_EOD_PREFIX}/_version.json",
             )
             data = json.loads(obj["Body"].read())
         else:
-            p = pathlib.Path(_RAW_PREFIX) / "eod_prices" / "_version.json"
+            p = pathlib.Path(_EOD_PREFIX) / "_version.json"
             if not p.exists():
                 return ""
             data = json.loads(p.read_text())

@@ -302,12 +302,8 @@ def run(cfg: Config) -> None:
         universe = universe[universe["security_id"].isin(failure_ids)].reset_index(drop=True)
         log.info("Retrying %d failed security(s)", len(universe))
 
-    # Storage config — mirrors lib/data.py env var resolution
     s3_bucket  = os.getenv("S3_BUCKET", "")
-    raw_prefix = os.getenv(
-        "RAW_PREFIX",
-        "history/raw" if s3_bucket else str(_ROOT / "data" / "raw"),
-    )
+    raw_prefix = "history/raw" if s3_bucket else str(_ROOT / "data" / "raw")
     s3_client = None
     if s3_bucket:
         import boto3

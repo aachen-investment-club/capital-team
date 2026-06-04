@@ -1,25 +1,15 @@
 # Capital Team — Portfolio Analytics Dashboard
 
-Read-only Streamlit dashboard for a live-money portfolio.
-Displays NAV performance vs benchmarks, position weights, individual position returns, and the trade log — all sourced purely from IBKR Flex Query data with no external price feeds.
+Read-only Streamlit dashboard for a live-money portfolio: NAV vs benchmarks, position weights, individual position returns, trade log, and EOD price history per security.
 
-## Quick start (local)
+## Quick start
 
 ```bash
-# Install dependencies
 uv sync
-
-# Parse IBKR XML source files into local Parquet
-uv run python scripts/ingest_ibkr_xml.py
-
-# Build derived tables (daily_weightings + portfolio_and_benchmarks)
-uv run python -m precompute.build_derived
-
-# Launch the dashboard
 uv run streamlit run app/Home.py
 ```
 
-Then open http://localhost:8501.
+Open http://localhost:8501. Leave `S3_BUCKET` empty in `.env` to run fully offline against local data.
 
 ---
 
@@ -28,44 +18,33 @@ Then open http://localhost:8501.
 ```
 capital-team/
 ├── app/
-│   ├── Home.py                        # Landing page
+│   ├── Home.py                         # Landing page
 │   └── pages/
-│       └── 01_Performance.py          # NAV · benchmarks · weights · positions · trade log
+│       ├── 01_Performance.py           # NAV · benchmarks · weights · positions · trade log
+│       └── 02_Equities.py              # Per-security EOD candlestick chart + metrics
 │
 ├── lib/
-│   ├── data.py                        # THE DATA CONTRACT — all loaders live here
-│   ├── ibkr.py                        # IBKR XML parsers + position computation
-│   ├── metrics.py                     # Shared analytics helpers
-│   └── theme.py                       # Plotly "capital" template + PNG export config
-│
-├── precompute/
-│   └── build_derived.py               # Nightly job: builds portfolio_and_benchmarks
-│                                      #              and daily_weightings from IBKR data
+│   ├── data.py                         # THE DATA CONTRACT — all loaders live here
+│   └── theme.py                        # Plotly "capital" template + brand CSS
 │
 ├── lambda/
-│   └── fund-data-ingestion/           # Fetches IBKR flex query → DynamoDB + S3
+│   └── fund-data-ingestion/            # Nightly: IBKR flex query → nav_history.json + S3
 │
 ├── scripts/
-│   ├── ingest_ibkr_xml.py             # Parse local XML → data/ibkr/*.parquet
-│   └── backfill_positions_to_s3.py    # One-time: push historical positions to S3
+│   ├── backfill_positions_to_s3.py     # Parse IBKR XML → build + upload portfolio JSON to S3
+│   ├── ingest_eod.py                   # Backfill + incremental EOD prices via LSEG
+│   └── lookup_rics.py                  # Find valid LSEG RICs from ISINs in security_master.csv
 │
-├── data/                              # gitignored — generated locally or synced from S3
-│   ├── ibkr/                          # Source: XML files + parsed Parquet
-│   │   ├── trade_log.xml              # IBKR trade log flex query export
-│   │   ├── prior_positions.xml        # IBKR historical positions flex query export
-│   │   ├── open_positions/
-│   │   │   └── YYYYMMDD.xml          # Daily open positions + FX positions flex query
-│   │   ├── trade_log.parquet
-│   │   ├── prior_positions.parquet
-│   │   ├── open_positions.parquet
-│   │   └── fx_positions.parquet
-│   ├── derived/                       # Built by precompute/build_derived.py
-│   │   ├── daily_weightings.parquet
-│   │   └── portfolio_and_benchmarks.parquet
-│   └── nav_history.json               # Downloaded from S3 for local dev
+├── config/
+│   └── security_master.csv             # EOD universe — add rows to extend, no code changes
+│
+├── data/                               # gitignored
+│   └── ibkr/                           # Source XML files (irreplaceable)
+│       ├── prior_positions.xml
+│       ├── trade_log.xml
+│       └── open_positions/YYYYMMDD.xml
 │
 ├── pyproject.toml
-├── uv.lock
 └── .env.example
 ```
 
@@ -73,40 +52,52 @@ capital-team/
 
 ## Architecture
 
-The dashboard is read-only and does no heavy computation at request time.
+The dashboard is read-only and does no computation at request time.
 
 ```
-IBKR Flex Query XML
+IBKR Flex Query XML (data/ibkr/)
         │
         ▼
-scripts/ingest_ibkr_xml.py          ← run when new XML is available
-        │  writes data/ibkr/*.parquet
+scripts/backfill_positions_to_s3.py          ← run once to rebuild from scratch
+        │  writes to S3: history/portfolio/*.json + derived/*.json
         ▼
-precompute/build_derived.py         ← run nightly (or manually)
-        │  reads ibkr Parquet + nav_history.json
-        │  writes daily_weightings.parquet
-        │          portfolio_and_benchmarks.parquet
+lambda/fund-data-ingestion  (nightly)
+        │  appends to nav_history.json and other files on S3
         ▼
 lib/data.py loaders  →  Streamlit pages
+
+config/security_master.csv
+        │
+        ▼
+scripts/ingest_eod.py                        ← run daily
+        │  writes to S3: history/raw/eod_prices/security_id=.../data.parquet
+        ▼
+lib/data.py  get_eod_prices()  →  02_Equities.py
 ```
-
-In production, the Lambda runs nightly and a manual precompute step keeps the derived tables fresh:
-
-```
-fund-data-ingestion lambda  (nightly, IBKR flex query)
-    → nav_history.json (S3)
-    → DynamoDB POSITIONS / METRICS
-    → daily_equity_positions/date=.../data.csv  (S3)
-    → daily_fx_positions/date=.../data.csv      (S3)
-
-precompute/build_derived.py  (run manually after new XML is ingested)
-    → history/derived/daily_weightings.parquet  (S3)
-    → history/derived/portfolio_and_benchmarks.parquet  (S3)
-```
-
-> **Note:** A dedicated Lambda to trigger `build_derived` automatically is planned but not yet set up.
 
 **Golden rule:** pages import from `lib/` only — never touch DuckDB, boto3, or file paths directly.
+
+---
+
+## S3 layout
+
+```
+s3://aic-fund-public-data/
+└── history/
+    ├── portfolio/
+    │   ├── nav_history.json
+    │   ├── equity_positions.json
+    │   ├── fx_positions.json
+    │   ├── trade_log.json
+    │   └── derived/
+    │       ├── portfolio_and_benchmarks.json
+    │       └── daily_weightings.json
+    └── raw/
+        └── eod_prices/
+            ├── security_id=SEC_001/data.parquet
+            ├── security_id=SEC_002/data.parquet
+            └── _version.json               ← written after each ingest run
+```
 
 ---
 
@@ -114,99 +105,77 @@ precompute/build_derived.py  (run manually after new XML is ingested)
 
 All data access goes through `lib/data.py`:
 
-| Loader | Returns |
-|---|---|
-| `get_daily_weightings_history()` | Daily weights + returns for all positions including cash |
-| `get_portfolio_and_benchmarks()` | NAV multiple + benchmark index values since inception |
-| `get_theme_mappings()` | Basket/theme per symbol (DynamoDB or category fallback) |
-| `get_trade_log()` | Trade history with same-day fills merged per position |
+| Loader | Source | Returns |
+|---|---|---|
+| `get_portfolio_and_benchmarks()` | `portfolio/derived/portfolio_and_benchmarks.json` | NAV + benchmark index values since inception |
+| `get_daily_weightings_history()` | `portfolio/derived/daily_weightings.json` | Daily weights + returns for all positions |
+| `get_trade_log()` | `portfolio/trade_log.json` | Trade history with same-day fills merged |
+| `get_theme_mappings()` | DynamoDB `fund-baskets` | Basket/theme per symbol (optional) |
+| `get_eod_prices(security_id, cache_version)` | `raw/eod_prices/security_id=.../data.parquet` | Daily OHLCV for one security |
+| `get_security_master()` | `config/security_master.csv` | Active EOD universe |
 
-Add new loaders here, never inside a page.
-
----
-
-## Daily workflow
-
-### Adding today's open positions (manual)
-
-1. Run the IBKR **open-positions** flex query, save the XML to:
-   ```
-   data/ibkr/open_positions/YYYYMMDD.xml
-   ```
-2. Ingest and rebuild:
-   ```bash
-   uv run python scripts/ingest_ibkr_xml.py
-   uv run python -m precompute.build_derived
-   ```
-
-### Production (automated via Lambda)
-
-```bash
-# Invoke the ingestion lambda manually
-aws lambda invoke \
-  --function-name fund-data-ingestion \
-  --region eu-central-1 \
-  --log-type Tail \
-  /tmp/response.json \
-  --query 'LogResult' \
-  --output text | base64 -d
-```
+Add new loaders to `lib/data.py`, never inside a page.
 
 ---
 
 ## Configuration
 
-Copy `.env.example` to `.env`. Leave `S3_BUCKET` empty to run fully offline.
+Copy `.env.example` to `.env`.
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `S3_BUCKET` | _(empty)_ | S3 bucket; empty = use local `./data/` |
-| `RAW_PREFIX` | `history/raw` | S3 prefix for raw Parquet/CSV |
-| `DERIVED_PREFIX` | `history/derived` | S3 prefix for derived Parquet |
-| `DDB_TABLE` | `fund-baskets` | DynamoDB table for theme/basket mappings |
+| `S3_BUCKET` | _(empty)_ | S3 bucket — empty = use local `./data/` |
 | `AWS_REGION` | `eu-central-1` | AWS region |
+| `DDB_TABLE` | `fund-baskets` | DynamoDB table for theme/basket mappings |
+| `LSEG_APP_KEY` | — | App key for LSEG Data Library (EOD ingestion only) |
+| `LSEG_SESSION_TYPE` | `platform` | `platform` (RDP) or `desktop` (Eikon/Workspace) |
 
 ---
 
-## Commands reference
+## Commands
 
 | Command | What it does |
 |---|---|
 | `uv run streamlit run app/Home.py` | Launch dashboard |
-| `uv run python scripts/ingest_ibkr_xml.py` | Parse XML → local IBKR Parquet files |
-| `uv run python -m precompute.build_derived` | Rebuild derived tables (local) |
-| `S3_BUCKET=aic-fund-public-data uv run python -m precompute.build_derived` | Rebuild and push to S3 |
-| `S3_BUCKET=aic-fund-public-data uv run python scripts/backfill_positions_to_s3.py` | Backfill historical positions to S3 |
-| `aws s3 cp data/nav_history.json . ← s3://aic-fund-public-data/history/nav_history.json` | Download nav history for local dev |
-| `aws s3 sync data/derived/ s3://aic-fund-public-data/history/derived/` | Push derived tables to S3 |
+| `S3_BUCKET=aic-fund-public-data uv run python scripts/backfill_positions_to_s3.py` | Rebuild all portfolio JSON from IBKR XML and push to S3 |
+| `uv run python scripts/ingest_eod.py` | Full backfill / incremental EOD price update |
+| `uv run python scripts/ingest_eod.py --dry-run` | Preview what would be fetched |
+| `uv run python scripts/ingest_eod.py --retry-failures` | Retry securities from last failed run |
+| `uv run python scripts/lookup_rics.py` | Find correct LSEG RICs from ISINs in security_master.csv |
 
 ---
 
-## Backfill / recovery from scratch
+## EOD universe
 
-If S3 data is lost or you need to rebuild from the source XML files:
+Securities are defined in `config/security_master.csv`. To add a new security:
+
+1. Run `scripts/lookup_rics.py` to find the correct LSEG RIC for the ISIN
+2. Add a row to `config/security_master.csv` — `security_id` must be unique and never reused
+3. Run `scripts/ingest_eod.py` — only the new security is fetched (existing ones are skipped)
+
+---
+
+## Rebuild from scratch
+
+If S3 data is lost or you need to rebuild everything from the source XML files:
 
 ```bash
-# 1. Rebuild local Parquet from XML
-uv run python scripts/ingest_ibkr_xml.py
-
-# 2. Push historical positions to S3
+# 1. Rebuild portfolio JSON from IBKR XML and push to S3
 S3_BUCKET=aic-fund-public-data uv run python scripts/backfill_positions_to_s3.py
 
-# 3. Rebuild and push derived tables
-S3_BUCKET=aic-fund-public-data \
-RAW_PREFIX=history/raw \
-DERIVED_PREFIX=history/derived \
-  uv run python -m precompute.build_derived
+# 2. Re-fetch EOD prices
+uv run python scripts/ingest_eod.py
 ```
 
-The three XML files under `data/ibkr/` are the only irreplaceable source data — everything else can be regenerated from them.
+The three XML files under `data/ibkr/` are the only irreplaceable source data.
+
+---
 
 ## Adding a page
 
 1. Create `app/pages/NN_name.py`
-2. Import data via `from lib.data import …` and helpers from `lib.metrics`
-3. Build charts using `lib.theme` — `template="capital"` and `PNG_CONFIG` for export
+2. Import data via `from lib.data import …`
+3. Build charts with `template="capital"` (set globally by `inject_css()`)
 4. Wrap expensive computation in `@st.cache_data`
 
 Streamlit auto-registers the file in the sidebar — no routing or config needed.
