@@ -15,6 +15,7 @@ import matplotlib.ticker as mticker
 
 from lib.theme import inject_css, FAVICON
 
+
 # Human-readable labels for ticker codes — used in chart legends and exports.
 DISPLAY_NAMES: dict[str, str] = {
     "PORTFOLIO":   "AIC Portfolio",
@@ -69,7 +70,7 @@ st.set_page_config(page_title="Performance · AIC", page_icon=FAVICON, layout="w
 inject_css()
 st.title("Performance")
 
-_TODAY    = date(2026, 5, 29)
+_TODAY    = date.today()
 _DATE_MIN = date(2026, 5, 6)   # fund inception — first date in nav_history
 
 
@@ -113,13 +114,13 @@ def _basket_html(df: pd.DataFrame) -> str:
         </tr>"""
 
         for _, pos in group.iterrows():
-            is_cash    = str(pos["symbol"]).startswith("CASH_")
+            is_base_ccy = pos["symbol"] == "CASH_EUR"
             pos_dr     = pos["daily_return"]
             pos_cr     = pos["cumulative_return"]
             pos_dr_col = GREEN if pos_dr >= 0 else RED
             pos_cr_col = GREEN if pos_cr >= 0 else RED
-            dr_str     = "–" if is_cash else f"{pos_dr:+.2%}"
-            cr_str     = "–" if is_cash else f"{pos_cr:+.2%}"
+            dr_str     = "–" if is_base_ccy else f"{pos_dr:+.2%}"
+            cr_str     = "–" if is_base_ccy else f"{pos_cr:+.2%}"
             rows_html += f"""
         <tr style="border-bottom:1px solid {BORDER};">
           <td style="padding:6px 14px 6px 30px;color:{TEXT};font-size:12px;font-weight:500;">{pos["symbol"]}</td>
@@ -330,7 +331,7 @@ else:
                           template="capital")
             fig.add_hline(y=1.0, line_dash="dot", line_color="#BFDBFE")
             fig.update_xaxes(rangebreaks=[dict(bounds=["sat", "mon"])])
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
         with tab_ret:
             fig = px.bar(df_perf_plot, x="date", y="daily_return", color="ticker", barmode="group",
                          color_discrete_map=bm_colors_display,
@@ -340,7 +341,7 @@ else:
             fig.update_layout(yaxis_tickformat=".1%")
             fig.add_hline(y=0, line_dash="dot", line_color="#BFDBFE")
             fig.update_xaxes(rangebreaks=[dict(bounds=["sat", "mon"])])
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
         st.markdown('<div class="action-ghost">', unsafe_allow_html=True)
         clicked = st.button("Export Figures", key="export_returns_mpl")
@@ -489,12 +490,12 @@ tab_w_pos, tab_w_class, tab_w_theme = st.tabs(["By Position", "By Asset Class", 
 
 with tab_w_pos:
     fig = _pie(_sort_pos_cash_first(df_snap), "symbol", "pct_nav")
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
 with tab_w_class:
     by_class = df_snap.groupby("category", as_index=False)["pct_nav"].sum()
     fig = _pie(by_class, "category", "pct_nav")
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
 with tab_w_theme:
     _bt = df_snap.groupby("theme", as_index=False)["pct_nav"].sum()
@@ -505,7 +506,7 @@ with tab_w_theme:
         _bt[~_bt["theme"].isin(_cash_t)].sort_values("pct_nav", ascending=False),
     ], ignore_index=True)
     fig = _pie(by_theme, "theme", "pct_nav")
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
 st.markdown('<div class="action-ghost">', unsafe_allow_html=True)
 clicked_pies = st.button("Export Figures", key="export_pies_mpl")
@@ -556,7 +557,7 @@ else:
             "quantity": "Qty", "entry_exit_price": "Entry/Exit Price",
             "effective_price": "Effective Price", "commission": "Commission",
         }),
-        use_container_width=True, hide_index=True,
+        width="stretch", hide_index=True,
         column_order=["Date", "Type", "Symbol", "ISIN", "Name", "CCY",
                       "Side", "Qty", "Entry/Exit Price", "Effective Price", "Commission"],
     )

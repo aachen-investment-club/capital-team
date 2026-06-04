@@ -33,7 +33,7 @@ import pandas as pd
 
 from lib.ibkr import (
     load_prior_positions, load_trade_log, load_open_positions, load_fx_positions,
-    build_daily_positions, build_cash_positions, _shares_from_trades,
+    build_daily_positions, build_cash_positions,
 )
 
 S3_BUCKET  = os.environ.get("S3_BUCKET",  "aic-fund-public-data")
@@ -57,15 +57,6 @@ def _write_csv(df: pd.DataFrame, key: str) -> None:
                   Body=df.to_csv(index=False).encode(),
                   ContentType="text/csv")
     print(f"  wrote s3://{S3_BUCKET}/{key}  ({len(df)} rows)")
-
-
-def _key_exists(key: str) -> bool:
-    from botocore.exceptions import ClientError
-    try:
-        s3.head_object(Bucket=S3_BUCKET, Key=key)
-        return True
-    except ClientError:
-        return False
 
 
 def backfill_equity_positions() -> None:

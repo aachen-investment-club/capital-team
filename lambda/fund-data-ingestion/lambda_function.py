@@ -232,6 +232,7 @@ def _write_positions_csv(report_date: str, positions: list[dict], fx_positions: 
                 "fx_rate_to_base":      float(p.get("fxRateToBase", 1)),
                 "mark_price":           float(p.get("markPrice", 0)),
                 "position":             float(p.get("position", 0)),
+                "value_eur":            float(p.get("markPrice", 0)) * float(p.get("position", 0)) * float(p.get("fxRateToBase", 1)),
                 "cost_basis_price":     float(p.get("costBasisPrice", 0)),
                 "fifo_pnl_unrealized":  float(p.get("fifoPnlUnrealized", 0)),
             } for p in positions])
@@ -243,11 +244,11 @@ def _write_positions_csv(report_date: str, positions: list[dict], fx_positions: 
 
         if fx_positions:
             fx_df = pd.DataFrame([{
-                "fx_currency":    p["fxCurrency"],
-                "quantity":       float(p.get("quantity", 0)),
-                "cost_price":     float(p.get("costPrice", 0)),
-                "value":      float(p.get("value", 0)),
-                "unrealized_pl":  float(p.get("unrealizedPL", 0)),
+                "fx_currency":      p["fxCurrency"],
+                "quantity":         float(p.get("quantity", 0)),
+                "cost_price":       float(p.get("costPrice", 0)),
+                "value_eur":        float(p.get("value", 0)),
+                "unrealized_pl":    float(p.get("unrealizedPL", 0)),
                 "percent_of_total": float(p.get("percentOfTotal", 0)),
             } for p in fx_positions])
             key = f"{RAW_PREFIX}/daily_fx_positions/{date_partition}/data.csv"

@@ -27,12 +27,14 @@ _con = duckdb.connect(":memory:")
 if _S3_BUCKET:
     _con.execute("INSTALL httpfs; LOAD httpfs;")
     _con.execute(f"SET s3_region='{_AWS_REGION}';")
-
-
-def _raw_partitioned(table: str) -> str:
-    if _S3_BUCKET:
-        return f"s3://{_S3_BUCKET}/{_RAW_PREFIX}/{table}/**/*.parquet"
-    return str(_ROOT / "data" / _RAW_PREFIX / table / "**" / "*.parquet")
+    import boto3
+    _creds = boto3.Session().get_credentials()
+    if _creds:
+        _creds = _creds.get_frozen_credentials()
+        _con.execute(f"SET s3_access_key_id='{_creds.access_key}';")
+        _con.execute(f"SET s3_secret_access_key='{_creds.secret_key}';")
+        if _creds.token:
+            _con.execute(f"SET s3_session_token='{_creds.token}';")
 
 
 def _write(df: pd.DataFrame, table: str) -> None:
@@ -139,109 +141,111 @@ def build_portfolio_and_benchmarks() -> None:
 
 def build_daily_weightings() -> None:
     """
-    Build daily_weightings from local IBKR Parquet files.
+    Build daily_weightings from the hive-partitioned raw CSV files written by the lambda.
 
-    Columns: date, symbol, name, isin, ccy, category, pct_nav, cumulative_return, daily_return
+    Reads:
+      {RAW_PREFIX}/daily_equity_positions/date=YYYY-MM-DD/data.csv
+      {RAW_PREFIX}/daily_fx_positions/date=YYYY-MM-DD/data.csv
 
-    Equity rows: from prior_positions + open_positions + trade_log
-    Cash rows  : CASH_EUR / CASH_GBP / CASH_USD derived from fx_positions quantities
-                 and daily FX rates extracted from equity prior positions
-
-    pct_nav is relative to total NAV = equity_value + cash_value per day.
-    The S3 rawNav is the authoritative check — if available it is used as the
-    NAV denominator so weights reconcile exactly with the public NAV report.
+    Columns out: date, symbol, name, isin, ccy, category, pct_nav, cumulative_return, daily_return
     """
-    from lib.ibkr import (
-        load_prior_positions, load_trade_log, load_open_positions, load_fx_positions,
-        build_daily_positions, build_cash_positions, compute_weightings,
-    )
-
-    prior  = load_prior_positions()
-    trades = load_trade_log()
-    opens  = load_open_positions()
-    fx_snap = load_fx_positions()
-
-    # Latest FX snapshot (most recent date in fx_positions)
-    latest_fx = fx_snap[fx_snap["date"] == fx_snap["date"].max()]
+    if _S3_BUCKET:
+        eq_glob = f"s3://{_S3_BUCKET}/{_RAW_PREFIX}/daily_equity_positions/**/*.csv"
+        fx_glob = f"s3://{_S3_BUCKET}/{_RAW_PREFIX}/daily_fx_positions/**/*.csv"
+    else:
+        eq_glob = str(pathlib.Path(_RAW_PREFIX) / "daily_equity_positions" / "**" / "*.csv")
+        fx_glob = str(pathlib.Path(_RAW_PREFIX) / "daily_fx_positions" / "**" / "*.csv")
 
     # ── Equity positions ───────────────────────────────────────────────────────
-    equity_pos = build_daily_positions(prior, trades, opens)
-    equity_wr  = compute_weightings(equity_pos, opens)
+    eq = _con.execute(f"""
+        SELECT
+            date::DATE           AS date,
+            symbol, name, isin, currency, asset_type,
+            fx_rate_to_base, mark_price,
+            position             AS shares,
+            value_eur,
+            cost_basis_price
+        FROM read_csv_auto('{eq_glob}', hive_partitioning=true)
+    """).df()
+    eq["date"] = pd.to_datetime(eq["date"])
+    eq = eq.sort_values(["symbol", "date"])
 
-    all_dates = pd.DatetimeIndex(sorted(equity_pos["date"].unique()))
+    eq["prev_price"]        = eq.groupby("symbol")["mark_price"].shift(1).fillna(eq["cost_basis_price"])
+    eq["daily_return"]      = (eq["mark_price"] / eq["prev_price"] - 1).fillna(0.0)
+    eq["cumulative_return"] = (eq["mark_price"] / eq["cost_basis_price"] - 1).fillna(0.0)
+    eq["pct_nav"]           = 0.0  # recomputed below
+    eq["category"]          = eq["asset_type"].map(
+        lambda x: "ETF" if x == "ETF" else ("Cash" if x == "CASH" else "Equities")
+    )
 
-    # ── Cash positions (constant quantities, variable FX) ─────────────────────
-    cash_pos = build_cash_positions(prior, latest_fx, all_dates)
+    # ── Cash positions from FX CSV ─────────────────────────────────────────────
+    fx = _con.execute(f"""
+        SELECT
+            date::DATE   AS date,
+            fx_currency, quantity, cost_price, value_eur
+        FROM read_csv_auto('{fx_glob}', hive_partitioning=true)
+    """).df()
+    fx["date"] = pd.to_datetime(fx["date"])
+
+    latest_fx = fx[fx["date"] == fx["date"].max()]
+    ccy_snap  = {row["fx_currency"]: row for _, row in latest_fx.iterrows()}
+
+    cash_rows = []
+    for dt, grp in fx.groupby("date"):
+        fx_val = {row["fx_currency"]: row["value_eur"] for _, row in grp.iterrows()}
+        for ccy, sym, lbl in [
+            ("EUR", "CASH_EUR", "Euro Cash"),
+            ("GBP", "CASH_GBP", "British Pound Cash"),
+            ("USD", "CASH_USD", "US Dollar Cash"),
+        ]:
+            val = fx_val.get(ccy, 0.0)
+            if ccy in ccy_snap:
+                snap         = ccy_snap[ccy]
+                qty          = float(snap["quantity"])
+                cost         = float(snap["cost_price"])
+                inception_val = qty * (cost if cost > 0 else 1.0)
+            else:
+                inception_val = 0.0
+            cash_rows.append({
+                "date":              dt,
+                "symbol":            sym,
+                "name":              lbl,
+                "isin":              "",
+                "currency":          ccy,
+                "asset_type":        "CASH",
+                "category":          "Cash",
+                "value_eur":         val,
+                "pct_nav":           0.0,
+                "cumulative_return": (val / inception_val - 1) if inception_val > 0 else 0.0,
+                "daily_return":      0.0,  # filled below
+            })
+
+    cash_df = pd.DataFrame(cash_rows).sort_values(["symbol", "date"])
+    cash_df["prev_val"]    = cash_df.groupby("symbol")["value_eur"].shift(1)
+    cash_df["daily_return"] = (cash_df["value_eur"] / cash_df["prev_val"] - 1).fillna(0.0)
+    cash_df.drop(columns=["prev_val"], inplace=True)
 
     # ── Merge equity + cash ───────────────────────────────────────────────────
-    eq_cols   = ["date", "symbol", "name", "isin", "currency", "asset_type",
-                 "value_eur", "pct_nav", "daily_return", "cumulative_return"]
-    cash_cols = ["date", "symbol", "name", "isin", "currency", "asset_type", "value_eur"]
+    shared = ["date", "symbol", "name", "isin", "currency", "asset_type",
+              "category", "value_eur", "pct_nav", "daily_return", "cumulative_return"]
+    combined = pd.concat([eq[shared], cash_df[shared]], ignore_index=True)
 
-    df_eq   = equity_wr[eq_cols].copy()
-    df_cash = cash_pos[cash_cols].copy()
-
-    # Cash daily_return = FX rate change; cumulative_return = FX gain from inception
-    df_cash = df_cash.sort_values(["symbol", "date"])
-    df_cash["prev_val"] = df_cash.groupby("symbol")["value_eur"].shift(1)
-    df_cash["daily_return"] = (
-        df_cash["value_eur"] / df_cash["prev_val"] - 1
-    ).fillna(0.0)
-
-    # Inception cost prices from fx_snap for cumulative return
-    inception_fx = {
-        row["fx_currency"]: row["cost_price"]
-        for _, row in latest_fx.iterrows()
-    }
-    qty_map = {
-        row["fx_currency"]: row["quantity"]
-        for _, row in latest_fx.iterrows()
-    }
-    for ccy, sym in [("EUR", "CASH_EUR"), ("GBP", "CASH_GBP"), ("USD", "CASH_USD")]:
-        inception_rate = inception_fx.get(ccy, 1.0) or 1.0
-        inception_val  = qty_map.get(ccy, 0.0) * inception_rate
-        mask = df_cash["symbol"] == sym
-        if ccy == "EUR":
-            df_cash.loc[mask, "cumulative_return"] = 0.0
-        else:
-            vals = df_cash.loc[mask, "value_eur"]
-            df_cash.loc[mask, "cumulative_return"] = (
-                (vals / inception_val - 1) if inception_val > 0 else 0.0
-            )
-    df_cash["cumulative_return"] = df_cash["cumulative_return"].fillna(0.0)
-    df_cash.drop(columns=["prev_val"], inplace=True)
-
-    # Add placeholder pct_nav to cash before concat (will be recomputed below)
-    df_cash["pct_nav"] = 0.0
-    combined = pd.concat([df_eq, df_cash[eq_cols]], ignore_index=True)
-
-    # ── Recompute pct_nav relative to total NAV (equity + cash) ───────────────
-    # Prefer rawNav from nav_history as denominator; fall back to summing positions
+    # ── Recompute pct_nav (prefer rawNav from nav_history as denominator) ─────
     nav_hist = _load_nav_history()
     if not nav_hist.empty and "rawNav" in nav_hist.columns:
         nav_lookup = nav_hist[["date", "rawNav"]].dropna().rename(columns={"rawNav": "total_nav"})
-        combined = combined.merge(nav_lookup, on="date", how="left")
-        daily_sum = combined.groupby("date")["value_eur"].transform("sum")
+        combined   = combined.merge(nav_lookup, on="date", how="left")
+        daily_sum  = combined.groupby("date")["value_eur"].transform("sum")
         combined["total_nav"] = combined["total_nav"].fillna(daily_sum)
     else:
         combined["total_nav"] = combined.groupby("date")["value_eur"].transform("sum")
 
     combined["pct_nav"] = combined["value_eur"] / combined["total_nav"] * 100
+    combined["ccy"]     = combined["currency"]
 
-    # ── Category (for theme/basket grouping) ──────────────────────────────────
-    def _category(asset_type: str) -> str:
-        if asset_type == "ETF":
-            return "ETF"
-        if asset_type == "CASH":
-            return "Cash"
-        return "Equities"
-
-    combined["category"] = combined["asset_type"].map(_category)
-    combined["ccy"] = combined["currency"]
-
-    out_cols = ["date", "symbol", "name", "isin", "ccy", "category",
-                "pct_nav", "cumulative_return", "daily_return"]
-    out = combined[out_cols].sort_values(["symbol", "date"]).reset_index(drop=True)
+    out = combined[["date", "symbol", "name", "isin", "ccy", "category",
+                    "pct_nav", "cumulative_return", "daily_return"]] \
+            .sort_values(["symbol", "date"]).reset_index(drop=True)
     _write(out, "daily_weightings")
 
 
