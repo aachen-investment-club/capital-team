@@ -16,6 +16,7 @@ import yfinance as yf
 DYNAMODB_TABLE  = "fund-data"
 S3_BUCKET       = "aic-fund-public-data"
 S3_KEY          = "history/nav_history.json"
+DEPOSIT_LOG_KEY = "history/deposit_log.json"
 RAW_PREFIX      = "history/raw"
 MIN_POINTS_RISK = 30
 
@@ -82,26 +83,35 @@ def parse_flex(root):
 
     positions = []
     for op in stmt.findall(".//OpenPosition"):
+        fx_rate    = float(op.attrib.get("fxRateToBase", 1))
+        mark_price = float(op.attrib.get("markPrice", 0))
+        position   = float(op.attrib.get("position", 0))
         positions.append({
-            "symbol":         op.attrib["symbol"],
-            "description":    op.attrib["description"],
-            "currency":       op.attrib["currency"],
-            "assetCategory":  op.attrib["assetCategory"],
-            "subCategory":    op.attrib["subCategory"],
-            "percentOfNAV":   float(op.attrib["percentOfNAV"]),
-            "securityID":     op.attrib["securityID"],
-            "securityIDType": op.attrib["securityIDType"],
+            "symbol":            op.attrib["symbol"],
+            "description":       op.attrib["description"],
+            "currency":          op.attrib["currency"],
+            "assetCategory":     op.attrib["assetCategory"],
+            "subCategory":       op.attrib["subCategory"],
+            "percentOfNAV":      float(op.attrib["percentOfNAV"]),
+            "securityID":        op.attrib["securityID"],
+            "securityIDType":    op.attrib["securityIDType"],
+            "fxRateToBase":      fx_rate,
+            "markPrice":         mark_price,
+            "position":          position,
+            "costBasisPrice":    float(op.attrib.get("costBasisPrice", 0)),
+            "fifoPnlUnrealized": float(op.attrib.get("fifoPnlUnrealized", 0)),
         })
 
     fx_positions = []
     for fp in stmt.findall(".//FxPosition"):
         value = float(fp.attrib["value"])
         fx_positions.append({
-            "fxCurrency":   fp.attrib["fxCurrency"],
-            "quantity":     float(fp.attrib["quantity"]),
-            "value":        value,
-            "unrealizedPL": float(fp.attrib["unrealizedPL"]),
-            "percentOfNAV": round(value / total_nav * 100, 2),
+            "fxCurrency":    fp.attrib["fxCurrency"],
+            "quantity":      float(fp.attrib["quantity"]),
+            "value":         value,
+            "costPrice":     float(fp.attrib.get("costPrice", 0)),
+            "unrealizedPL":  float(fp.attrib["unrealizedPL"]),
+            "percentOfTotal": round(value / total_nav * 100, 2),
         })
 
     date_iso = f"{report_date[:4]}-{report_date[4:6]}-{report_date[6:]}"
@@ -156,6 +166,47 @@ def save_history(history):
     )
 
 
+def load_deposit_log() -> list:
+    try:
+        obj = s3.get_object(Bucket=S3_BUCKET, Key=DEPOSIT_LOG_KEY)
+        return json.loads(obj["Body"].read())
+    except ClientError as e:
+        if e.response["Error"]["Code"] in ("NoSuchKey", "404"):
+            return []
+        raise
+
+
+def recompute_history(history: list, deposit_log: list) -> list:
+    """Replay the full history to compute unit-price-based fundNav.
+
+    Deposits buy units at the unit price of the previous day, so they never
+    inflate the reported return.  Running this on every invocation means a
+    late-entered deposit automatically corrects all past entries.
+    """
+    if not history:
+        return history
+
+    deposits_by_date = {d["date"]: d["amount"] for d in deposit_log}
+    total_units = history[0]["rawNav"]  # bootstrap: first rawNav defines unit count
+
+    for i, entry in enumerate(history):
+        if i > 0:
+            deposit = deposits_by_date.get(entry["date"], 0)
+            if deposit:
+                prev_unit_price = history[i - 1]["rawNav"] / total_units
+                total_units    += deposit / prev_unit_price
+                if total_units <= 0:
+                    raise ValueError(
+                        f"deposit_log entry on {entry['date']} (amount={deposit}) "
+                        f"makes totalUnits non-positive ({total_units:.4f}) — check the amount"
+                    )
+
+        entry["totalUnits"] = round(total_units, 6)
+        entry["fundNav"]    = round(entry["rawNav"] / total_units, 6)
+
+    return history
+
+
 # ── S3 raw positions writers (dashboard data) ─────────────────────────────────
 
 def _write_positions_csv(report_date: str, positions: list[dict], fx_positions: list[dict]) -> None:
@@ -193,12 +244,12 @@ def _write_positions_csv(report_date: str, positions: list[dict], fx_positions: 
 
         if fx_positions:
             fx_df = pd.DataFrame([{
-                "fx_currency":   p["fxCurrency"],
-                "quantity":      float(p.get("quantity", 0)),
-                "cost_price":    float(p.get("costPrice", 0)),
-                "close_price":   float(p.get("closePrice", 1)),
-                "value_eur":     float(p.get("value", 0)),
-                "unrealized_pl": float(p.get("unrealizedPL", 0)),
+                "fx_currency":    p["fxCurrency"],
+                "quantity":       float(p.get("quantity", 0)),
+                "cost_price":     float(p.get("costPrice", 0)),
+                "value":      float(p.get("value", 0)),
+                "unrealized_pl":  float(p.get("unrealizedPL", 0)),
+                "percent_of_total": float(p.get("percentOfTotal", 0)),
             } for p in fx_positions])
             key = f"{RAW_PREFIX}/daily_fx_positions/{date_partition}/data.csv"
             s3.put_object(Bucket=S3_BUCKET, Key=key,
@@ -288,29 +339,55 @@ def lambda_handler(event, context):
     report_date, total_nav, positions, fx = parse_flex(flex_root)
     prices                                = fetch_market_prices(report_date)
 
-    history = load_history()
+    deposit_log = load_deposit_log()
+    history     = recompute_history(load_history(), deposit_log)
 
     if not any(h["date"] == report_date for h in history):
-        initial_nav       = history[0]["rawNav"] if history and "rawNav" in history[0] else total_nav
-        fund_nav_multiple = round(total_nav / initial_nav, 6)
+        if history:
+            prev_units      = history[-1]["totalUnits"]
+            prev_unit_price = history[-1]["rawNav"] / prev_units
+        else:
+            prev_units      = total_nav
+            prev_unit_price = 1.0
+
+        deposit     = sum(d["amount"] for d in deposit_log if d["date"] == report_date)
+        total_units = prev_units + (deposit / prev_unit_price if deposit else 0)
+
         entry = {
-            "date":    report_date,
-            "fundNav": fund_nav_multiple,
-            "rawNav":  round(total_nav, 4),
+            "date":       report_date,
+            "fundNav":    round(total_nav / total_units, 6),
+            "rawNav":     round(total_nav, 4),
+            "totalUnits": round(total_units, 6),
             **{k: v for k, v in prices.items() if v is not None},
         }
         history.append(entry)
-        save_history(history)
+
+    save_history(history)
 
     current_nav_multiple = history[-1]["fundNav"]
     metrics = compute_metrics(history[:-1], current_nav_multiple, report_date)
 
+    ddb_positions = [{
+        "symbol":        p["symbol"],
+        "description":   p["description"],
+        "currency":      p["currency"],
+        "assetCategory": p["assetCategory"],
+        "subCategory":   p["subCategory"],
+        "percentOfNAV":  p["percentOfNAV"],
+        "securityID":    p["securityID"],
+        "securityIDType": p["securityIDType"],
+    } for p in positions]
+
+    ddb_fx = [{
+        "fxCurrency":    fp["fxCurrency"],
+        "percentOfTotal": fp["percentOfTotal"],
+    } for fp in fx]
+
     table.put_item(Item=to_decimal({"pk": "METRICS", **metrics}))
     table.put_item(Item=to_decimal({
         "pk":          "POSITIONS",
-        "positions":   positions,
-        "fxPositions": fx,
-        "totalNAV":    round(total_nav, 4),
+        "positions":   ddb_positions,
+        "fxPositions": ddb_fx,
         "lastUpdated": report_date,
     }))
 
