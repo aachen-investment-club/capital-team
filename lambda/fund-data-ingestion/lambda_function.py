@@ -122,7 +122,6 @@ def parse_flex(root):
 
 MARKET_TICKERS = {
     "^GSPC": "spxClose",
-    "BIL":   "sofrClose",
     "URTH":  "msciWorldClose",
     "EZU":   "msciEuropeClose",
     "AOR":   "sixtyFortyClose",
