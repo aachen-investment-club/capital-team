@@ -16,4 +16,5 @@ dependencies = [
     "python-dotenv>=1.2.2",
     "botocore[crt]>=1.43.18",
     "matplotlib>=3.10.9",
+    "lseg-data>=2.0.0",
 ]

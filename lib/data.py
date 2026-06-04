@@ -2,6 +2,7 @@
 THE DATA CONTRACT — all data access goes through here.
 Pages must never import boto3, duckdb, or reference S3/file paths directly.
 """
+import json
 import os
 import pathlib
 
@@ -135,6 +136,86 @@ def _theme_mappings_from_ddb() -> pd.DataFrame:
         )
         items.extend(resp["Items"])
     return pd.DataFrame(items)[["symbol", "theme"]] if items else pd.DataFrame(columns=["symbol", "theme"])
+
+
+_CONFIG_DIR = _ROOT / "config"
+
+
+# ── EOD price loaders ─────────────────────────────────────────────────────────
+
+def _eod_path(security_id: str) -> str:
+    """Return the Parquet path for one security's EOD partition."""
+    partition = f"security_id={security_id}/data.parquet"
+    if _S3_BUCKET:
+        return f"s3://{_S3_BUCKET}/{_RAW_PREFIX}/eod_prices/{partition}"
+    return str(pathlib.Path(_RAW_PREFIX) / "eod_prices" / partition)
+
+
+@st.cache_data(ttl=60)
+def _eod_data_version() -> str:
+    """Return the ingestion timestamp from _version.json (refreshes every 60s).
+
+    Used as a cache-key parameter in get_eod_prices so a fresh ingestion run
+    immediately invalidates cached price data on the next page load.
+    Returns "" when no ingestion has run yet.
+    """
+    try:
+        if _S3_BUCKET:
+            import boto3
+            s3 = boto3.client("s3", region_name=_AWS_REGION)
+            obj = s3.get_object(
+                Bucket=_S3_BUCKET,
+                Key=f"{_RAW_PREFIX}/eod_prices/_version.json",
+            )
+            data = json.loads(obj["Body"].read())
+        else:
+            p = pathlib.Path(_RAW_PREFIX) / "eod_prices" / "_version.json"
+            if not p.exists():
+                return ""
+            data = json.loads(p.read_text())
+        return data.get("ingested_at", "")
+    except Exception:
+        return ""
+
+
+@st.cache_data
+def get_eod_prices(security_id: str, cache_version: str = "") -> pd.DataFrame:
+    """Daily EOD OHLCV for one security, sorted by date ascending.
+
+    cache_version is included in the cache key — pass _eod_data_version() so
+    the chart refreshes automatically after a new ingestion run.
+
+    Columns: security_id, date, open, high, low, close, adj_close, volume
+    Returns an empty DataFrame (no error) if no data has been ingested yet.
+    """
+    path = _eod_path(security_id)
+    try:
+        df = _con().execute(
+            f"SELECT * FROM read_parquet('{path}') ORDER BY date"
+        ).df()
+    except Exception:
+        return pd.DataFrame(
+            columns=["security_id", "date", "open", "high", "low", "close", "adj_close", "volume"]
+        )
+    return _log("eod_prices", df)
+
+
+@st.cache_data(ttl=3600)
+def get_security_master() -> pd.DataFrame:
+    """Active securities from config/security_master.csv.
+
+    Columns: security_id, ric, ticker, isin, name, currency, asset_type
+    Sorted by ticker. Extend the universe by adding rows to the CSV — no code changes needed.
+    """
+    csv_path = _CONFIG_DIR / "security_master.csv"
+    if not csv_path.exists():
+        return pd.DataFrame(
+            columns=["security_id", "ric", "ticker", "isin", "name", "currency", "asset_type"]
+        )
+    df = pd.read_csv(csv_path, dtype=str)
+    df["active"] = df["active"].str.lower().isin(("true", "1", "yes"))
+    df = df[df["active"]].drop(columns=["active"]).sort_values("ticker").reset_index(drop=True)
+    return _log("security_master", df)
 
 
 @st.cache_data(ttl=3600)
