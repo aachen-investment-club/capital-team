@@ -19,7 +19,9 @@ AWS credentials must be available (env vars, SSO, or IAM role).
 Usage:
     S3_BUCKET=aic-fund-public-data python scripts/backfill_positions_to_s3.py
 """
+import json
 import os
+import subprocess
 import sys
 import pathlib
 
@@ -37,8 +39,17 @@ from lib.ibkr import (
 S3_BUCKET  = os.environ.get("S3_BUCKET",  "aic-fund-public-data")
 AWS_REGION = os.environ.get("AWS_REGION", "eu-central-1")
 RAW_PREFIX = "history/raw"
+NAV_KEY    = "history/nav_history.json"
 
 s3 = boto3.client("s3", region_name=AWS_REGION)
+
+
+def _load_nav_history() -> dict[str, float]:
+    raw = subprocess.run(
+        ["aws", "--region", AWS_REGION, "s3", "cp", f"s3://{S3_BUCKET}/{NAV_KEY}", "-"],
+        capture_output=True, text=True, check=True,
+    ).stdout
+    return {entry["date"]: float(entry["rawNav"]) for entry in json.loads(raw)}
 
 
 def _write_csv(df: pd.DataFrame, key: str) -> None:
@@ -59,27 +70,29 @@ def _key_exists(key: str) -> bool:
 
 def backfill_equity_positions() -> None:
     print("[daily_equity_positions]")
-    prior   = load_prior_positions()
-    trades  = load_trade_log()
-    opens   = load_open_positions()
-    shares  = _shares_from_trades(trades)
+    prior  = load_prior_positions()
+    trades = load_trade_log()
+    opens  = load_open_positions()
 
-    # Combine prior + open positions, resolved with shares
     eq = build_daily_positions(prior, trades, opens)
+
+    # cost basis: latest open-position snapshot per symbol (constant for buy-and-hold)
+    cost_map = opens.sort_values("date").groupby("symbol")["cost_basis_price"].last().to_dict()
 
     for dt, group in eq.groupby("date"):
         date_str = dt.strftime("%Y-%m-%d")
         key = f"{RAW_PREFIX}/daily_equity_positions/date={date_str}/data.csv"
-        if _key_exists(key):
-            print(f"  {date_str}: already present — skipped")
-            continue
+
         rows = group[["symbol", "name", "isin", "currency", "asset_type",
                        "fx_rate_to_base", "price", "shares", "value_eur"]].copy()
         rows.columns = ["symbol", "name", "isin", "currency", "asset_type",
                         "fx_rate_to_base", "mark_price", "position", "value_eur"]
-        cost_map = {op["symbol"]: op.get("cost_basis_price", 0) for _, op in opens.iterrows()}
-        rows["cost_basis_price"] = rows["symbol"].map(cost_map).fillna(0)
-        rows["fifo_pnl_unrealized"] = 0.0
+        rows["cost_basis_price"]    = rows["symbol"].map(cost_map).fillna(0)
+        # Reconstruct from price and cost basis — same formula IBKR uses, in local currency.
+        # Accurate as long as no new lots were added (cost basis unchanged).
+        rows["fifo_pnl_unrealized"] = (
+            (rows["mark_price"] - rows["cost_basis_price"]) * rows["position"]
+        ).round(4)
         _write_csv(rows, key)
 
 
@@ -89,29 +102,30 @@ def backfill_fx_positions() -> None:
     fx_snap = load_fx_positions()
     latest_fx = fx_snap[fx_snap["date"] == fx_snap["date"].max()]
 
-    # Get all equity dates to know which dates need FX position rows
+    nav_by_date = _load_nav_history()
+
     all_dates = pd.DatetimeIndex(sorted(prior["date"].unique()))
     cash_pos  = build_cash_positions(prior, latest_fx, all_dates)
 
-    for dt, group in cash_pos.groupby("date"):
-        date_str = dt.strftime("%Y-%m-%d")
-        key = f"{RAW_PREFIX}/daily_fx_positions/date={date_str}/data.csv"
-        if _key_exists(key):
-            print(f"  {date_str}: already present — skipped")
-            continue
+    fx_map = {row["fx_currency"]: row for _, row in latest_fx.iterrows()}
 
-        fx_map = {row["fx_currency"]: row for _, row in latest_fx.iterrows()}
+    for dt, group in cash_pos.groupby("date"):
+        date_str  = dt.strftime("%Y-%m-%d")
+        key = f"{RAW_PREFIX}/daily_fx_positions/date={date_str}/data.csv"
+
+        total_nav = nav_by_date.get(date_str, 0.0)
         rows = []
         for _, cash_row in group.iterrows():
-            ccy = cash_row["currency"]
-            snap = fx_map.get(ccy, {})
+            ccy       = cash_row["currency"]
+            snap      = fx_map.get(ccy, {})
+            value_eur = cash_row["value_eur"]
             rows.append({
-                "fx_currency":   ccy,
-                "quantity":      cash_row["shares"],
-                "cost_price":    snap.get("cost_price", 1.0 if ccy == "EUR" else 0.0),
-                "close_price":   cash_row["fx_rate_to_base"],
-                "value_eur":     cash_row["value_eur"],
-                "unrealized_pl": snap.get("unrealized_pl", 0.0) if ccy != "EUR" else 0.0,
+                "fx_currency":    ccy,
+                "quantity":       cash_row["shares"],
+                "cost_price":     snap.get("cost_price", 1.0 if ccy == "EUR" else 0.0),
+                "value_eur":      value_eur,
+                "unrealized_pl":  snap.get("unrealized_pl", 0.0) if ccy != "EUR" else 0.0,
+                "percent_of_total": round(value_eur / total_nav * 100, 2) if total_nav else 0.0,
             })
         _write_csv(pd.DataFrame(rows), key)
 

@@ -83,10 +83,9 @@ def parse_prior_positions(xml_str: str) -> pd.DataFrame:
 def parse_fx_positions(xml_str: str) -> pd.DataFrame:
     """
     Parse FxPositions XML from IBKR Flex Query.
-    Returns: date, fx_currency, quantity, cost_price, close_price, value_eur, unrealized_pl
+    Returns: date, fx_currency, quantity, cost_price, value_eur, unrealized_pl
 
     cost_price is the EUR rate at which the cash was acquired (inception FX rate).
-    EUR has cost_price=0 (base currency) and close_price=1 always.
     """
     root = ET.fromstring(xml_str)
     rows = []
@@ -96,7 +95,6 @@ def parse_fx_positions(xml_str: str) -> pd.DataFrame:
             "fx_currency":   p.get("fxCurrency"),
             "quantity":      float(p.get("quantity", 0)),
             "cost_price":    float(p.get("costPrice", 0)),
-            "close_price":   float(p.get("closePrice", 1)),
             "value_eur":     float(p.get("value", 0)),
             "unrealized_pl": float(p.get("unrealizedPL", 0)),
         })

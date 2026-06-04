@@ -190,20 +190,14 @@ If S3 data is lost or you need to rebuild from the source XML files:
 # 1. Rebuild local Parquet from XML
 uv run python scripts/ingest_ibkr_xml.py
 
-# 2. Download nav_history for NAV weights
-aws s3 cp s3://aic-fund-public-data/history/nav_history.json data/nav_history.json
-
-# 3. Push historical positions to S3
+# 2. Push historical positions to S3
 S3_BUCKET=aic-fund-public-data uv run python scripts/backfill_positions_to_s3.py
 
-# 4. Rebuild and push derived tables
+# 3. Rebuild and push derived tables
 S3_BUCKET=aic-fund-public-data \
 RAW_PREFIX=history/raw \
 DERIVED_PREFIX=history/derived \
   uv run python -m precompute.build_derived
-
-# 5. Push local derived tables if precompute ran locally
-aws s3 sync data/derived/ s3://aic-fund-public-data/history/derived/
 ```
 
 The three XML files under `data/ibkr/` are the only irreplaceable source data — everything else can be regenerated from them.
