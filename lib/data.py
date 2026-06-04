@@ -15,16 +15,16 @@ _ROOT = pathlib.Path(__file__).resolve().parent.parent
 load_dotenv(_ROOT / ".env")
 
 _S3_BUCKET      = os.getenv("S3_BUCKET", "")
-_RAW_PREFIX     = os.getenv("RAW_PREFIX",     "history/raw"     if _S3_BUCKET else str(_ROOT / "data" / "raw"))
-_DERIVED_PREFIX = os.getenv("DERIVED_PREFIX", "history/derived" if _S3_BUCKET else str(_ROOT / "data" / "derived"))
+_RAW_PREFIX     = os.getenv("RAW_PREFIX",     "history"         if _S3_BUCKET else str(_ROOT / "data" / "raw"))
+_DERIVED_PREFIX = os.getenv("DERIVED_PREFIX", "history/portfolio/derived" if _S3_BUCKET else str(_ROOT / "data" / "derived"))
 _AWS_REGION     = os.getenv("AWS_REGION", "eu-central-1")
 _DDB_TABLE      = os.getenv("DDB_TABLE", "")
 
 
-def _path(prefix: str, table: str) -> str:
+def _path(prefix: str, table: str, ext: str = "parquet") -> str:
     if _S3_BUCKET:
-        return f"s3://{_S3_BUCKET}/{prefix}/{table}.parquet"
-    return f"{prefix}/{table}.parquet"
+        return f"s3://{_S3_BUCKET}/{prefix}/{table}.{ext}"
+    return f"{prefix}/{table}.{ext}"
 
 @st.cache_resource(ttl=3600)
 def _con() -> duckdb.DuckDBPyConnection:
@@ -80,11 +80,12 @@ def get_portfolio_and_benchmarks() -> pd.DataFrame:
     Columns: date, ticker, index_value, daily_return
     ticker = 'PORTFOLIO' | 'SPX' | 'MSCI_WORLD' | 'MSCI_EUROPE' | '60_40'
     """
-    path = _path(_DERIVED_PREFIX, "portfolio_and_benchmarks")
+    path = _path(_DERIVED_PREFIX, "portfolio_and_benchmarks", "json")
     print(f"[data] loading portfolio_and_benchmarks from {path}")
     df = _con().execute(
-        f"SELECT date, ticker, index_value, daily_return FROM read_parquet('{path}') ORDER BY ticker, date"
+        f"SELECT date, ticker, index_value, daily_return FROM read_json_auto('{path}') ORDER BY ticker, date"
     ).df()
+    df["date"] = pd.to_datetime(df["date"])
     return _log("portfolio_and_benchmarks", df)
 
 
@@ -96,12 +97,13 @@ def get_daily_weightings_history() -> pd.DataFrame:
     Built by precompute/build_derived.py — refresh with:
         python -m precompute.build_derived
     """
-    path = _path(_DERIVED_PREFIX, "daily_weightings")
+    path = _path(_DERIVED_PREFIX, "daily_weightings", "json")
     print(f"[data] loading daily_weightings from {path}")
     df = _con().execute(
         f"SELECT date, symbol, name, isin, ccy, category, pct_nav, cumulative_return, daily_return"
-        f" FROM read_parquet('{path}') ORDER BY symbol, date"
+        f" FROM read_json_auto('{path}') ORDER BY symbol, date"
     ).df()
+    df["date"] = pd.to_datetime(df["date"])
     return _log("daily_weightings", df)
 
 
@@ -221,14 +223,17 @@ def get_security_master() -> pd.DataFrame:
 @st.cache_data(ttl=3600)
 def get_trade_log() -> pd.DataFrame:
     """Trade history from IBKR Flex Query, with same-day fills merged per symbol.
-    Fractional-share fills (0 commission) are combined with the main order so each
-    row represents one trade event, not individual broker fills.
-
     Columns: trade_date, symbol, name, isin, currency, asset_type,
              buy_sell, quantity, entry_exit_price, effective_price, proceeds, commission
     """
-    from lib.ibkr import load_trade_log
-    raw = load_trade_log()
+    if _S3_BUCKET:
+        path = f"s3://{_S3_BUCKET}/history/portfolio/trade_log.json"
+    else:
+        path = str(_ROOT / "data" / "trade_log.json")
+    print(f"[data] loading trade_log from {path}")
+    raw = _con().execute(f"SELECT * FROM read_json_auto('{path}')").df()
+    raw["trade_date"] = pd.to_datetime(raw["trade_date"])
+
     agg = (
         raw.groupby(
             ["trade_date", "symbol", "name", "isin", "currency", "asset_type", "buy_sell"],
@@ -238,8 +243,6 @@ def get_trade_log() -> pd.DataFrame:
              proceeds=("proceeds", "sum"),
              commission=("commission", "sum"))
     )
-    # Execution price per share (proceeds are negative for buys, positive for sells)
     agg["entry_exit_price"] = (-agg["proceeds"] / agg["quantity"]).round(4)
-    # Effective price: execution price adjusted for transaction cost per share
-    agg["effective_price"] = ((-agg["proceeds"] + agg["commission"].abs()) / agg["quantity"]).round(4)
+    agg["effective_price"]  = ((-agg["proceeds"] + agg["commission"].abs()) / agg["quantity"]).round(4)
     return _log("trade_log", agg.sort_values("trade_date", ascending=False).reset_index(drop=True))

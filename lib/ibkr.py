@@ -4,12 +4,12 @@ All data access for the Performance page flows through lib/data.py,
 which calls these functions. Do not import directly from pages.
 
 Data flow:
-  data/ibkr/trade_log.xml            → trade_log.parquet
-  data/ibkr/prior_positions.xml      → prior_positions.parquet  (historical backfill)
-  data/ibkr/open_positions/YYYYMMDD.xml → open_positions.parquet  (appended daily)
+  data/ibkr/prior_positions.xml         — historical daily prices
+  data/ibkr/trade_log.xml               — all trades since inception
+  data/ibkr/open_positions/YYYYMMDD.xml — current open positions + FX snapshot
 
-The open_positions.parquet is the daily extension point:
-  each day, parse a new OpenPositions flex query XML and append via append_open_positions().
+The backfill script (scripts/backfill_positions_to_s3.py) parses these XML files
+directly and uploads the results to S3 — no intermediate local files are created.
 """
 import pathlib
 import xml.etree.ElementTree as ET
@@ -17,13 +17,8 @@ import xml.etree.ElementTree as ET
 import pandas as pd
 
 _ROOT = pathlib.Path(__file__).resolve().parent.parent
-IBKR_DIR = _ROOT / "data" / "ibkr"
-
-_TRADE_LOG_PARQUET     = IBKR_DIR / "trade_log.parquet"
-_PRIOR_POS_PARQUET     = IBKR_DIR / "prior_positions.parquet"
-_OPEN_POS_PARQUET      = IBKR_DIR / "open_positions.parquet"
-_FX_POS_PARQUET        = IBKR_DIR / "fx_positions.parquet"
-_OPEN_POS_XML_DIR      = IBKR_DIR / "open_positions"
+IBKR_DIR         = _ROOT / "data" / "ibkr"
+_OPEN_POS_XML_DIR = IBKR_DIR / "open_positions"
 
 
 # ── Parsers ───────────────────────────────────────────────────────────────────
@@ -129,61 +124,6 @@ def parse_open_positions(xml_str: str) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-# ── Parquet helpers ───────────────────────────────────────────────────────────
-
-def load_fx_positions() -> pd.DataFrame:
-    return pd.read_parquet(_FX_POS_PARQUET)
-
-
-def append_fx_positions(new_df: pd.DataFrame) -> None:
-    """Append a parsed fx_positions DataFrame to the cumulative Parquet file (idempotent)."""
-    if _FX_POS_PARQUET.exists():
-        existing = pd.read_parquet(_FX_POS_PARQUET)
-        existing_dates = set(existing["date"].dt.normalize().unique())
-        to_add = new_df[~new_df["date"].dt.normalize().isin(existing_dates)]
-        if to_add.empty:
-            return
-        combined = pd.concat([existing, to_add], ignore_index=True)
-    else:
-        combined = new_df.copy()
-    combined = combined.sort_values(["date", "fx_currency"]).reset_index(drop=True)
-    _FX_POS_PARQUET.parent.mkdir(parents=True, exist_ok=True)
-    combined.to_parquet(_FX_POS_PARQUET, index=False)
-
-
-def load_trade_log() -> pd.DataFrame:
-    return pd.read_parquet(_TRADE_LOG_PARQUET)
-
-
-def load_prior_positions() -> pd.DataFrame:
-    return pd.read_parquet(_PRIOR_POS_PARQUET)
-
-
-def load_open_positions() -> pd.DataFrame:
-    return pd.read_parquet(_OPEN_POS_PARQUET)
-
-
-def append_open_positions(new_df: pd.DataFrame) -> None:
-    """
-    Append a parsed open_positions DataFrame to the cumulative Parquet file.
-    Dates already present are skipped (idempotent — safe to re-run).
-    """
-    if _OPEN_POS_PARQUET.exists():
-        existing = pd.read_parquet(_OPEN_POS_PARQUET)
-        existing_dates = set(existing["date"].dt.normalize().unique())
-        new_dates = set(new_df["date"].dt.normalize().unique())
-        to_add = new_df[~new_df["date"].dt.normalize().isin(existing_dates)]
-        if to_add.empty:
-            print(f"  open_positions: dates {new_dates} already present — skipped")
-            return
-        combined = pd.concat([existing, to_add], ignore_index=True)
-    else:
-        combined = new_df.copy()
-
-    combined = combined.sort_values(["date", "symbol"]).reset_index(drop=True)
-    _OPEN_POS_PARQUET.parent.mkdir(parents=True, exist_ok=True)
-    combined.to_parquet(_OPEN_POS_PARQUET, index=False)
-    print(f"  open_positions: appended {len(new_df)} rows → {len(combined)} total")
 
 
 # ── Position computation ──────────────────────────────────────────────────────
