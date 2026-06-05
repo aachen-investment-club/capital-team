@@ -210,3 +210,34 @@ The three XML files under `data/ibkr/` are the only irreplaceable source data.
 4. Wrap expensive computation in `@st.cache_data`
 
 Streamlit auto-registers the file in the sidebar — no routing or config needed.
+
+---
+
+## Production deployment
+
+The dashboard runs on an AWS Lightsail instance ($5/mo, Ubuntu 22.04, eu-central-1) behind nginx with Let's Encrypt TLS.
+
+**Live URL:** https://portfolio.aachen-investment-club.de
+
+### Auto-deploy
+
+Every push to `main` triggers the GitHub Actions workflow at `.github/workflows/deploy.yml`, which SSHes into the server and runs `git pull` + `systemctl restart capital-dashboard`.
+
+### Manual deploy
+
+```bash
+# SSH into the server
+ssh -i ~/.ssh/LightsailDefaultKey-eu-central-1.pem ubuntu@<server-ip>
+
+# Pull and restart
+cd /opt/capital-dashboard && bash deploy/deploy.sh
+```
+
+### Infrastructure files
+
+| File | Purpose |
+|---|---|
+| `deploy/server-setup.sh` | One-shot bootstrap for a fresh Lightsail instance |
+| `deploy/deploy.sh` | Pull + restart on the server |
+| `deploy/capital-dashboard.service` | systemd unit file |
+| `deploy/nginx-capital-dashboard.conf` | Nginx reverse proxy config |
