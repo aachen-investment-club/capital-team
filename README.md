@@ -147,32 +147,6 @@ Copy `.env.example` to `.env`.
 | `uv run python scripts/ingest_eod.py --retry-failures` | Retry securities from last failed run |
 | `uv run python scripts/lookup_rics.py` | Find correct LSEG RICs from ISINs in security_master.csv |
 
----
-
-## Deploying fund-eod-ingestion Lambda
-
-```bash
-# 1. Upload the security master to S3 (Lambda reads it from there)
-aws s3 cp config/security_master.csv s3://aic-fund-public-data/config/security_master.csv
-
-# 2. Build and push the container image
-cd lambda/fund-eod-ingestion
-aws ecr create-repository --repository-name fund-eod-ingestion --region eu-central-1  # first time only
-ECR=<account-id>.dkr.ecr.eu-central-1.amazonaws.com
-aws ecr get-login-password | docker login --username AWS --password-stdin $ECR
-docker build -t fund-eod-ingestion .
-docker tag fund-eod-ingestion:latest $ECR/fund-eod-ingestion:latest
-docker push $ECR/fund-eod-ingestion:latest
-
-# 3. Set Lambda env vars in the AWS console:
-#    S3_BUCKET, AWS_REGION, LSEG_APP_KEY, LSEG_USERNAME, LSEG_PASSWORD
-#    (see .env.example for details)
-
-# 4. Schedule with EventBridge — daily after market close, e.g.:
-#    cron(0 21 ? * MON-FRI *)   ← 21:00 UTC / 22:00 CET on weekdays
-```
-
-When `config/security_master.csv` changes (new security added), re-upload to S3 — no container rebuild needed.
 
 ---
 
