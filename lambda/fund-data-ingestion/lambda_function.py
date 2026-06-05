@@ -55,8 +55,8 @@ def fetch_flex_query():
         error_code = root.findtext("ErrorCode")
         if status == "Success":
             break
-        if error_code == "1001":
-            print(f"IBKR not ready (1001), retrying in 30s… (attempt {send_attempt + 1}/5)")
+        if error_code in ("1001", "1004"):
+            print(f"IBKR not ready ({error_code}), retrying in 30s… (attempt {send_attempt + 1}/5)")
             time.sleep(30)
         else:
             raise RuntimeError(f"Flex SendRequest failed: {status} / {error_code}: {root.findtext('ErrorMessage')}")

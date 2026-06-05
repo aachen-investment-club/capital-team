@@ -70,7 +70,7 @@ st.set_page_config(page_title="Performance · AIC", page_icon=FAVICON, layout="w
 inject_css()
 st.title("Performance")
 
-_TODAY    = date.today()
+_TODAY    = date.today() - pd.Timedelta(days=1) 
 _DATE_MIN = date(2026, 5, 6)   # fund inception — first date in nav_history
 
 
