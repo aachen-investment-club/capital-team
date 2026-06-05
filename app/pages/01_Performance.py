@@ -175,13 +175,12 @@ def _weightings_with_themes() -> pd.DataFrame:
 # Matplotlib export for Returns vs Benchmark
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _export_returns_matplotlib(df_perf: pd.DataFrame) -> list[str]:
-    """Save Returns vs Benchmark charts as transparent-background PNGs to ~/Downloads."""
-    from pathlib import Path
-    from datetime import datetime as _dt
+def _export_returns_matplotlib(df_perf: pd.DataFrame) -> bytes:
+    """Return a ZIP of transparent-background PNGs for Returns vs Benchmark charts."""
+    import io
+    import zipfile
 
-    downloads = Path.home() / "Downloads"
-    saved: list[str] = []
+    figures: dict[str, bytes] = {}
 
     # PORTFOLIO first, then remaining tickers alphabetically
     _all = df_perf["ticker"].unique()
@@ -221,10 +220,11 @@ def _export_returns_matplotlib(df_perf: pd.DataFrame) -> list[str]:
         for line in leg.get_lines():
             line.set_linewidth(3)
 
-    def _save(fig, path: str) -> None:
-        fig.savefig(path, dpi=200, bbox_inches="tight", transparent=True)
+    def _save(fig, name: str) -> None:
+        buf = io.BytesIO()
+        fig.savefig(buf, format="png", dpi=200, bbox_inches="tight", transparent=True)
         plt.close(fig)
-        saved.append(path)
+        figures[name] = buf.getvalue()
 
     # ── 1. Index — line chart ─────────────────────────────────────────
     fig, ax = plt.subplots(figsize=(14, 7))
@@ -240,7 +240,7 @@ def _export_returns_matplotlib(df_perf: pd.DataFrame) -> list[str]:
     ax.tick_params(axis="x", rotation=30)
     _legend(ax)
     fig.tight_layout()
-    _save(fig, str(downloads / f"returns_index.png"))
+    _save(fig, "returns_index.png")
 
     # ── 2. Daily returns — grouped bar chart ─────────────────────────────────
     fig, ax = plt.subplots(figsize=(14, 7))
@@ -268,9 +268,13 @@ def _export_returns_matplotlib(df_perf: pd.DataFrame) -> list[str]:
     ax.set_ylabel("Daily Return", fontsize=F_LABEL, labelpad=10)
     _legend(ax)
     fig.tight_layout()
-    _save(fig, str(downloads / f"returns_bar.png"))
+    _save(fig, "returns_bar.png")
 
-    return saved
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for name, data in figures.items():
+            zf.writestr(name, data)
+    return buf.getvalue()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -344,15 +348,14 @@ else:
             st.plotly_chart(fig, width="stretch")
 
         st.markdown('<div class="action-ghost">', unsafe_allow_html=True)
-        clicked = st.button("Export Figures", key="export_returns_mpl")
+        st.download_button(
+            "Export Figures",
+            data=_export_returns_matplotlib(df_perf),
+            file_name="returns_charts.zip",
+            mime="application/zip",
+            key="export_returns_mpl",
+        )
         st.markdown('</div>', unsafe_allow_html=True)
-        if clicked:
-            try:
-                paths = _export_returns_matplotlib(df_perf)
-                for p in paths:
-                    st.success(f"Saved: {p}")
-            except Exception as exc:
-                st.error(f"Export failed: {exc}")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -373,13 +376,12 @@ def _sort_pos_cash_first(df: pd.DataFrame) -> pd.DataFrame:
     return pd.concat([cash, equity], ignore_index=True)
 
 
-def _export_pies_matplotlib(df_snap: pd.DataFrame) -> list[str]:
-    """Save all three Portfolio Weightings pies as transparent PNGs to ~/Downloads."""
-    from pathlib import Path
-    from datetime import datetime as _dt
+def _export_pies_matplotlib(df_snap: pd.DataFrame) -> bytes:
+    """Return a ZIP of transparent-background PNGs for Portfolio Weightings pie charts."""
+    import io
+    import zipfile
 
-    downloads = Path.home() / "Downloads"
-    saved: list[str] = []
+    figures: dict[str, bytes] = {}
 
     _LEADER_MIN = 1.0   # label slices >= this %
 
@@ -435,10 +437,10 @@ def _export_pies_matplotlib(df_snap: pd.DataFrame) -> list[str]:
                     rotation=rot, rotation_mode="anchor",
                     linespacing=1.3)
 
-        path = str(downloads / f"weights_{suffix}.png")
-        fig.savefig(path, dpi=200, bbox_inches="tight", transparent=True)
+        buf = io.BytesIO()
+        fig.savefig(buf, format="png", dpi=200, bbox_inches="tight", transparent=True)
         plt.close(fig)
-        saved.append(path)
+        figures[f"weights_{suffix}.png"] = buf.getvalue()
 
     # By Position — cash first
     df_pos = _sort_pos_cash_first(df_snap)
@@ -458,7 +460,11 @@ def _export_pies_matplotlib(df_snap: pd.DataFrame) -> list[str]:
     ], ignore_index=True)
     _save_pie(by_theme["theme"].tolist(), by_theme["pct_nav"].tolist(), "by_theme")
 
-    return saved
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for name, data in figures.items():
+            zf.writestr(name, data)
+    return buf.getvalue()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -509,15 +515,14 @@ with tab_w_theme:
     st.plotly_chart(fig, width="stretch")
 
 st.markdown('<div class="action-ghost">', unsafe_allow_html=True)
-clicked_pies = st.button("Export Figures", key="export_pies_mpl")
+st.download_button(
+    "Export Figures",
+    data=_export_pies_matplotlib(df_snap),
+    file_name="weights_charts.zip",
+    mime="application/zip",
+    key="export_pies_mpl",
+)
 st.markdown('</div>', unsafe_allow_html=True)
-if clicked_pies:
-    try:
-        paths = _export_pies_matplotlib(df_snap)
-        for p in paths:
-            st.success(f"Saved: {p}")
-    except Exception as exc:
-        st.error(f"Export failed: {exc}")
 
 st.subheader(f"Holdings — {snap_date.strftime('%d %b %Y')}")
 st.html(_basket_html(df_snap))
