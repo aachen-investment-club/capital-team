@@ -1,0 +1,23 @@
+name: Deploy to Lightsail
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.LIGHTSAIL_HOST }}
+          username: ubuntu
+          key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
+          script: |
+            cd /opt/capital-dashboard
+            git pull
+            if git diff HEAD@{1} --name-only | grep -q pyproject.toml; then
+              .venv/bin/pip install -e .
+            fi
+            sudo systemctl restart capital-dashboard

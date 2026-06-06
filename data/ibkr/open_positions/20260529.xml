@@ -1,0 +1,21 @@
+<FlexQueryResponse queryName="open-positions" type="AF">
+<FlexStatements count="1">
+<FlexStatement accountId="U24262233" fromDate="20260529" toDate="20260529" period="LastBusinessDay" whenGenerated="20260531;173115">
+<OpenPositions>
+<OpenPosition currency="EUR" fxRateToBase="1" assetCategory="STK" subCategory="COMMON" symbol="AIXA" description="AIXTRON SE" securityID="DE000A0WMPJ6" securityIDType="ISIN" reportDate="20260529" position="1.2662" markPrice="58.24" costBasisPrice="51.52929395" percentOfNAV="11.04" fifoPnlUnrealized="8.493608"/>
+<OpenPosition currency="EUR" fxRateToBase="1" assetCategory="STK" subCategory="ETF" symbol="ESIF" description="ISHARES EUROPE FINANCL EUR A" securityID="IE00BMW42306" securityIDType="ISIN" reportDate="20260529" position="6.2475" markPrice="15.318" costBasisPrice="15.486832333" percentOfNAV="14.33" fifoPnlUnrealized="-1.053985"/>
+<OpenPosition currency="EUR" fxRateToBase="1" assetCategory="STK" subCategory="COMMON" symbol="SAN" description="BANCO SANTANDER SA" securityID="ES0113900J37" securityIDType="ISIN" reportDate="20260529" position="8.8896" markPrice="10.728" costBasisPrice="10.883473047" percentOfNAV="14.28" fifoPnlUnrealized="-1.379722"/>
+<OpenPosition currency="EUR" fxRateToBase="1" assetCategory="STK" subCategory="ETF" symbol="SMH" description="VANECK SEMICONDUCTOR ETF" securityID="IE00BMC38736" securityIDType="ISIN" reportDate="20260529" position="0.7428" markPrice="95.28" costBasisPrice="85.482821756" percentOfNAV="10.60" fifoPnlUnrealized="7.27336"/>
+<OpenPosition currency="EUR" fxRateToBase="1" assetCategory="STK" subCategory="ETF" symbol="WDEF" description="WT EUROPE DEFENCE UCITS ETF" securityID="IE0002Y8CX98" securityIDType="ISIN" reportDate="20260529" position="5.9748" markPrice="32.24" costBasisPrice="31.883845819" percentOfNAV="28.84" fifoPnlUnrealized="2.130398"/>
+<OpenPosition currency="GBP" fxRateToBase="1.154" assetCategory="STK" subCategory="COMMON" symbol="TRNl" description="TRAINLINE PLC" securityID="GB00BKDTK925" securityIDType="ISIN" reportDate="20260529" position="15.9574" markPrice="2.2" costBasisPrice="2.549750523" percentOfNAV="6.07" fifoPnlUnrealized="-5.577389"/>
+<OpenPosition currency="USD" fxRateToBase="0.85756" assetCategory="STK" subCategory="ETF" symbol="URNU" description="GLOBAL X URANIUM UCITS USD-A" securityID="IE000NDWFGA5" securityIDType="ISIN" reportDate="20260529" position="1.6071" markPrice="31.055" costBasisPrice="37.488955261" percentOfNAV="6.41" fifoPnlUnrealized="-10.3385"/>
+<OpenPosition currency="USD" fxRateToBase="0.85756" assetCategory="STK" subCategory="ETF" symbol="XLUS" description="INVESCO US UTILITIES S&amp;P" securityID="IE00B3VPKB53" securityIDType="ISIN" reportDate="20260529" position="0.1019" markPrice="644.45" costBasisPrice="674.183022571" percentOfNAV="8.43" fifoPnlUnrealized="-3.02925"/>
+</OpenPositions>
+<FxPositions>
+<FxPosition assetCategory="CASH" reportDate="20260529" functionalCurrency="EUR" fxCurrency="EUR" quantity="1244.107237468" costPrice="0" costBasis="-1244.107237468" closePrice="1" value="1244.107237468" unrealizedPL="0"/>
+<FxPosition assetCategory="CASH" reportDate="20260529" functionalCurrency="EUR" fxCurrency="GBP" quantity="162.305914" costPrice="1.165320039" costBasis="-189.138334" closePrice="1.154" value="187.301025" unrealizedPL="-1.837309"/>
+<FxPosition assetCategory="CASH" reportDate="20260529" functionalCurrency="EUR" fxCurrency="USD" quantity="464.87725" costPrice="0.853018161" costBasis="-396.548737" closePrice="0.85756" value="398.660134" unrealizedPL="2.111397"/>
+</FxPositions>
+</FlexStatement>
+</FlexStatements>
+</FlexQueryResponse>
