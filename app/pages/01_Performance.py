@@ -65,6 +65,7 @@ from lib.data import (
     get_theme_mappings,
     get_trade_log,
 )
+from lib.analysis import compute_metrics, metrics_html, legend_html
 
 st.set_page_config(page_title="Performance · AIC", page_icon=FAVICON, layout="wide")
 inject_css()
@@ -566,3 +567,40 @@ else:
         column_order=["Date", "Type", "Symbol", "ISIN", "Name", "CCY",
                       "Side", "Qty", "Entry/Exit Price", "Effective Price", "Commission"],
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Portfolio Analytics
+# ─────────────────────────────────────────────────────────────────────────────
+st.divider()
+st.subheader("Portfolio Analytics")
+
+try:
+    _df_all = get_portfolio_and_benchmarks()
+
+    _port_rets = (
+        _df_all[_df_all["ticker"] == "PORTFOLIO"]
+        .sort_values("date")
+        .set_index("date")["daily_return"]
+        .dropna()
+    )
+    _spx_rets = (
+        _df_all[_df_all["ticker"] == "SPX"]
+        .sort_values("date")
+        .set_index("date")["daily_return"]
+        .dropna()
+    )
+
+    if len(_port_rets) < 5:
+        st.info("Not enough portfolio history to compute analytics yet (need ≥ 5 days).")
+    else:
+        _bench = _spx_rets if not _spx_rets.empty else None
+        _metrics = compute_metrics(_port_rets, bench_daily_returns=_bench)
+
+        st.html(metrics_html(_metrics))
+
+        with st.expander("Colour-scale legend"):
+            st.html(legend_html())
+
+except Exception as _e:
+    st.info(f"Analytics unavailable: {_e}")

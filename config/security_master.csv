@@ -1,4 +1,7 @@
 security_id,ric,ticker,isin,name,currency,asset_type,active
+SEC_009,.SPX,SPX,,S&P 500 Index,USD,INDEX,true
+SEC_010,.dMSWO,MSCI_WORLD,,MSCI World Index,USD,INDEX,true
+SEC_011,.MXEU0EL,MSCI_EUROPE,,MSCI Europe Index,EUR,INDEX,true
 SEC_001,AIXGn.DE,AIXA,DE000A0WMPJ6,AIXTRON SE,EUR,COMMON,true
 SEC_002,ESIF.DE,ESIF,IE00BMW42306,iShares Europe Financials UCITS ETF,EUR,ETF,true
 SEC_003,SAN.MC,SAN,ES0113900J37,Banco Santander SA,EUR,COMMON,true

@@ -14,12 +14,41 @@ st.set_page_config(
 )
 inject_css()
 
-st.title("Portfolio Dashboard")
+st.title("AIC Capital Dashboard")
 st.caption("Aachen Investment Club e.V. · Capital Team · read-only · data refreshes daily")
 st.divider()
 
-st.markdown("""
-| Page | What it shows |
-|---|---|
-| **Performance** | Portfolio vs benchmarks · single-position returns · daily weightings by basket · trade log |
-""")
+PAGES = [
+    ("01", "Performance",        "Returns, attribution, weightings, and trade log."),
+    ("02", "Equities",           "Factor screening across all holdings."),
+    ("03", "Weighting",          "Position and basket weights over time."),
+    ("04", "Volatility",         "Realised volatility per position and portfolio."),
+    ("05", "Barra",              "Multi-factor risk decomposition."),
+    ("06", "Correlation",        "Rolling and partial correlations across key market pairs."),
+    ("07", "Credit & Liquidity", "HY spread stress and market liquidity monitor."),
+    ("08", "Trend Detection",    "Kalman and SMA trend filters with GJR-GARCH adaptive noise."),
+    ("09", "Structural Break",   "Regime shift detection via CUSUM and BOCPD."),
+]
+
+st.divider()
+st.markdown("**Work in progress**")
+WIP = [
+    "Structural Break — CUSUM & BOCPD regime detection",
+    "Regime Detection — hidden Markov model overlay",
+    "DCC-GARCH — dynamic correlations for intra-portfolio positions",
+]
+for item in WIP:
+    st.markdown(
+        f"<span style='color:#F59E0B'>⚙</span>"
+        f"<span style='color:#94A3B8'>  {item}</span>",
+        unsafe_allow_html=True,
+    )
+st.divider()
+
+for num, name, desc in PAGES:
+    col_name, col_desc = st.columns([1, 4])
+    with col_name:
+        st.markdown(f"**{name}**")
+    with col_desc:
+        st.markdown(f"<span style='color:#94A3B8'>{desc}</span>", unsafe_allow_html=True)
+    st.markdown("<hr style='margin:6px 0;border-color:#1E293B'>", unsafe_allow_html=True)

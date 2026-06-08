@@ -1,0 +1,19 @@
+{
+  "failures": [
+    {
+      "security_id": "SEC_009",
+      "ticker": "SPX",
+      "error": "Unable to collect data for the field 'TR.OPENPRICE' and some specific identifier(s). Requested universes: ['.SPX']. Requested fields: ['TR.OPENPRICE', 'TR.HIGHPRICE', 'TR.LOWPRICE', 'TR.CLOSEPRICE', 'TR.VOLUME']"
+    },
+    {
+      "security_id": "SEC_010",
+      "ticker": "MSCI_WORLD",
+      "error": "Unable to resolve all requested identifiers in ['.dMSWO']."
+    },
+    {
+      "security_id": "SEC_011",
+      "ticker": "MSCI_EUROPE",
+      "error": "Unable to resolve all requested identifiers in ['.MXEU0EL']."
+    }
+  ]
+}

@@ -17,6 +17,9 @@ dependencies = [
     "botocore[crt]>=1.43.18",
     "matplotlib>=3.10.9",
     "lseg-data>=2.0.0",
+    "cvxpy>=1.4.0",
+    "arch>=6.3.0",
+    "statsmodels>=0.14.0",
 ]
 
 [tool.setuptools]
