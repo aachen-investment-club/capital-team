@@ -47,21 +47,16 @@ def fetch_flex_query():
 
     req_url = f"{base}/SendRequest?t={token}&q={query_id}&v=3"
 
-    for send_attempt in range(5):
-        with urllib.request.urlopen(req_url) as r:
-            root = ET.fromstring(r.read())
-        status     = root.findtext("Status")
-        ref_code   = root.findtext("ReferenceCode")
-        error_code = root.findtext("ErrorCode")
-        if status == "Success":
-            break
-        if error_code in ("1001", "1004"):
-            print(f"IBKR not ready ({error_code}), retrying in 30s… (attempt {send_attempt + 1}/5)")
-            time.sleep(30)
-        else:
-            raise RuntimeError(f"Flex SendRequest failed: {status} / {error_code}: {root.findtext('ErrorMessage')}")
-    else:
-        raise TimeoutError("IBKR returned 1001 five times — statement not available yet")
+    with urllib.request.urlopen(req_url) as r:
+        root = ET.fromstring(r.read())
+    status     = root.findtext("Status")
+    ref_code   = root.findtext("ReferenceCode")
+    error_code = root.findtext("ErrorCode")
+
+    if error_code in ("1001", "1004"):
+        raise TimeoutError("IBKR statement not available yet — retry later")
+    if status != "Success":
+        raise RuntimeError(f"Flex SendRequest failed: {status} / {error_code}: {root.findtext('ErrorMessage')}")
 
     for attempt in range(6):
         time.sleep(5)
@@ -559,6 +554,13 @@ def lambda_handler(event, context):
     print("fund-data-ingestion START")
     print("=" * 60)
 
+    # ── 0. Idempotency guard ──────────────────────────────────────
+    today = date.today().isoformat()
+    existing = load_history()
+    if any(h["date"] == today for h in existing):
+        print(f"  entry for {today} already present — nothing to do")
+        return {"status": "already_done", "date": today}
+
     # ── 1. Fetch & parse Flex Query ───────────────────────────────
     print("\n[1/7] Fetching IBKR Flex Query…")
     flex_root = fetch_flex_query()
@@ -608,9 +610,6 @@ def lambda_handler(event, context):
     else:
         print(f"  entry for {report_date} already present — recomputed only")
 
-    save_history(history)
-    print(f"  saved nav_history: {len(history)} entries  ({history[0]['date']} → {history[-1]['date']})")
-
     # ── 4. Metrics → DynamoDB ─────────────────────────────────────
     print("\n[4/7] Computing metrics & writing DynamoDB…")
     current_nav_multiple = history[-1]["fundNav"]
@@ -659,6 +658,9 @@ def lambda_handler(event, context):
     # ── 7. Build derived tables ───────────────────────────────────
     print("\n[7/7] Building derived tables…")
     run_build_derived(history)
+
+    save_history(history)
+    print(f"  saved nav_history: {len(history)} entries  ({history[0]['date']} → {history[-1]['date']})")
 
     print("\n" + "=" * 60)
     prices_str = "  ".join(f"{k}={v}" for k, v in prices.items() if v is not None)
