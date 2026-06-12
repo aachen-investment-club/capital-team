@@ -28,6 +28,8 @@ from lib.volatility import (
 st.set_page_config(page_title="Volatility · AIC", page_icon=FAVICON, layout="wide")
 inject_css()
 st.title("Volatility")
+with st.popover("ℹ"):
+    st.markdown("""Fits GARCH family models to estimate how volatile each asset currently is, compares model forecasts against realised vol, and projects volatility forward over your chosen horizon.""")
 
 _TODAY    = date.today() - pd.Timedelta(days=1)
 _DATE_MIN = date(2015, 1, 1)
@@ -37,43 +39,25 @@ _BENCH_TICKERS = {"SPX", "MSCI_WORLD", "MSCI_EUROPE", "60_40"}
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 
-with st.sidebar:
-    st.header("Settings")
+# ── Controls ──────────────────────────────────────────────────────────────────
 
-    sm = get_security_master()
-    # Separate portfolio securities from index benchmarks
-    _equities   = sm[sm["asset_type"] != "INDEX"]["ticker"].tolist() if not sm.empty else []
-    _idx_tickers = sm[sm["asset_type"] == "INDEX"]["ticker"].tolist() if not sm.empty else []
-    # Asset list: Portfolio, then equities/ETFs, then index benchmarks
-    asset_options = ["Portfolio"] + _equities + _idx_tickers
-    selected_asset = st.selectbox("Asset", asset_options)
+sm = get_security_master()
+_equities    = sm[sm["asset_type"] != "INDEX"]["ticker"].tolist() if not sm.empty else []
+_idx_tickers = sm[sm["asset_type"] == "INDEX"]["ticker"].tolist() if not sm.empty else []
+asset_options = ["Portfolio"] + _equities + _idx_tickers
 
-    selected_models = st.multiselect(
-        "Models",
-        options=list(ALL_MODELS),
-        default=list(ALL_MODELS),
-        help="Select one or more GARCH-family models to compare.",
-    )
-
-    backtest_from = st.date_input(
-        "Backtest from",
-        value=date(2025, 1, 1),
-        min_value=_DATE_MIN,
-        max_value=_TODAY,
-        help="Training window ends here; test window starts from this date. "
-             "For assets with long EOD history (after running ingest_eod.py) "
-             "you can push this back to 2015.",
-    )
-
-    forecast_horizon = st.slider(
-        "Forecast horizon (days)",
-        min_value=5,
-        max_value=90,
-        value=30,
-        step=5,
-    )
-
-    run_btn = st.button("Run", type="primary", use_container_width=True)
+_c1, _c2, _c3, _c4, _c5 = st.columns([1.2, 1.8, 1.5, 1.5, 0.8])
+selected_asset  = _c1.selectbox("Asset", asset_options)
+selected_models = _c2.multiselect(
+    "Models", options=list(ALL_MODELS), default=list(ALL_MODELS),
+    help="Select one or more GARCH-family models to compare.",
+)
+backtest_from = _c3.date_input(
+    "Backtest from", value=date(2025, 1, 1),
+    min_value=_DATE_MIN, max_value=_TODAY,
+)
+forecast_horizon = _c4.slider("Forecast horizon (days)", min_value=5, max_value=90, value=30, step=5)
+run_btn          = _c5.button("Run", type="primary", use_container_width=True)
 
 
 # ── Data loading ──────────────────────────────────────────────────────────────

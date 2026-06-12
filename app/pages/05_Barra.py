@@ -37,22 +37,18 @@ from lib.barra import (
 st.set_page_config(page_title="Barra · AIC", page_icon=FAVICON, layout="wide")
 inject_css()
 st.title("Barra Factor Model")
+with st.popover("ℹ"):
+    st.markdown("""Takes a cross section of the market and fits a regression to explain what drove our returns. Factors include sector exposure, momentum, and volatility rather than individual stock moves. Tells you whether losses came from bad factor bets or from idiosyncratic stock risk.""")
 
 _TODAY    = date.today() - pd.Timedelta(days=1)
 _DATE_MIN = date(2024, 1, 1)
 
 
-# ── Sidebar ───────────────────────────────────────────────────────────────────
+# ── Controls ──────────────────────────────────────────────────────────────────
 
-with st.sidebar:
-    st.header("Settings")
-    as_of_date = st.date_input(
-        "As-of date",
-        value=_TODAY,
-        min_value=_DATE_MIN,
-        max_value=_TODAY,
-    )
-    run_btn = st.button("Run Barra", type="primary", use_container_width=True)
+_c1, _c2 = st.columns([2, 1])
+as_of_date = _c1.date_input("As-of date", value=_TODAY, min_value=_DATE_MIN, max_value=_TODAY)
+run_btn    = _c2.button("Run Barra", type="primary", use_container_width=True)
 
 
 # ── Data loading ──────────────────────────────────────────────────────────────
@@ -122,7 +118,7 @@ if run_btn:
             ]
 
             snap_date = fund_asof["date"].max()
-            st.sidebar.caption(f"Snapshot: {snap_date.date()}  ·  {len(snap_records)} securities")
+            st.caption(f"Snapshot: {snap_date.date()}  ·  {len(snap_records)} securities")
 
             # Exclude only the tickers we explicitly know are ETFs or indices
             # (from security_master). Everything else in the fundamentals universe
@@ -159,7 +155,7 @@ if run_btn:
                 if not equity_weights.empty:
                     equity_weights = equity_weights / equity_weights.sum()
                     port_exp = portfolio_weighted_exposure(X, equity_weights)
-                    st.sidebar.caption(
+                    st.caption(
                         f"Portfolio: {len(equity_weights)} equity positions matched  "
                         f"({', '.join(equity_weights.index.tolist())})"
                     )

@@ -27,49 +27,44 @@ st.set_page_config(
 )
 inject_css()
 st.title("Structural Break Detection")
+with st.popover("ℹ"):
+    st.markdown("""Detects when the market has shifted into a new regime (e.g. from calm to stressed) using two methods: CUSUM, which flags when a stress signal persistently drifts above or below its baseline, and BOCPD, which estimates the probability that the current observation belongs to a new distribution.""")
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 
-with st.sidebar:
-    st.header("Settings")
-    date_start = st.date_input("Start date", value=pd.Timestamp("2019-01-01").date())
-    date_end   = st.date_input("End date",   value=pd.Timestamp.today().date())
+# ── Controls ──────────────────────────────────────────────────────────────────
 
-    st.divider()
-    st.subheader("Signal source")
-    st.caption("Apply CUSUM & BOCPD to a price series in addition to the macro signal bus.")
-    source_benchmarks  = st.checkbox("Benchmarks",           value=True)
-    source_positions   = st.checkbox("Portfolio positions",  value=False)
-    source_aggregate   = st.checkbox("Portfolio aggregate",  value=False)
-    source_custom      = st.checkbox("Custom search",        value=False)
+_r1c1, _r1c2, _r1c3, _r1c4, _r1c5, _r1c6 = st.columns([1.2, 1.2, 0.8, 0.8, 0.8, 0.8])
+date_start         = _r1c1.date_input("Start date", value=pd.Timestamp("2019-01-01").date())
+date_end           = _r1c2.date_input("End date",   value=pd.Timestamp.today().date())
+source_benchmarks  = _r1c3.checkbox("Benchmarks",          value=True)
+source_positions   = _r1c4.checkbox("Positions",           value=False)
+source_aggregate   = _r1c5.checkbox("Portfolio NAV",       value=False)
+source_custom      = _r1c6.checkbox("Custom",              value=False)
 
-    custom_ric = ""
-    if source_custom:
-        custom_ric = st.text_input(
-            "RIC or Yahoo ticker",
-            placeholder="e.g. NVDA or NVDA.O",
-            help="Try Yahoo Finance ticker first (e.g. NVDA). For LSEG-only names use the full RIC.",
-        )
-
-    st.divider()
-    st.subheader("CUSUM parameters")
-    cusum_k = st.slider("k  (allowance)",  0.1, 2.0, 0.3, step=0.05,
-                        help="Per-step allowance before CUSUM accumulates. Lower = more sensitive.")
-    cusum_h = st.slider("h  (threshold)",  1.0, 15.0, 6.0, step=0.5,
-                        help="Decision boundary. Higher = fewer, higher-confidence signals.")
-
-    st.divider()
-    st.subheader("BOCPD parameters")
-    hazard_options = {"1/50  — short (~10 wk)": 1/50,
-                      "1/150 — medium (~30 wk)": 1/150,
-                      "1/300 — long  (~60 wk)": 1/300}
-    hazard_label = st.selectbox("Hazard rate", list(hazard_options.keys()), index=1)
-    bocpd_hazard = hazard_options[hazard_label]
-    bocpd_nu     = st.slider("ν  (degrees of freedom)", 3, 20, 5,
+_r2c1, _r2c2, _r2c3, _r2c4, _r2c5 = st.columns([1.5, 1.5, 1.5, 1.5, 0.8])
+cusum_k = _r2c1.slider("CUSUM k (allowance)",  0.1, 2.0, 0.3, step=0.05,
+                       help="Per-step allowance before CUSUM accumulates. Lower = more sensitive.")
+cusum_h = _r2c2.slider("CUSUM h (threshold)",  1.0, 15.0, 6.0, step=0.5,
+                       help="Decision boundary. Higher = fewer, higher-confidence signals.")
+hazard_options = {"1/50  — short (~10 wk)": 1/50,
+                  "1/150 — medium (~30 wk)": 1/150,
+                  "1/300 — long  (~60 wk)": 1/300}
+hazard_label = _r2c3.selectbox("BOCPD hazard rate", list(hazard_options.keys()), index=1)
+bocpd_hazard = hazard_options[hazard_label]
+bocpd_nu     = _r2c4.slider("BOCPD ν (d.o.f.)", 3, 20, 5,
                              help="Student-t tail weight. Lower = heavier tails.")
+run_btn      = _r2c5.button("Refresh", type="primary", use_container_width=True)
 
-    st.divider()
-    run_btn = st.button("Refresh", type="primary", use_container_width=True)
+custom_ric = ""
+if source_custom:
+    custom_ric = st.text_input(
+        "RIC or Yahoo ticker",
+        placeholder="e.g. NVDA or NVDA.O",
+        help="Try Yahoo Finance ticker first. For LSEG-only names use the full RIC.",
+    )
+
+st.divider()
 
 
 # ── Constants ─────────────────────────────────────────────────────────────────
@@ -109,7 +104,7 @@ def _load_macro(start: str, end: str, _bust: int = 3) -> dict:
     try:
         result["hy_oas"] = load_fred("BAMLH0A0HYM2", start, end)
     except Exception as e:
-        st.sidebar.warning(f"FRED HY OAS failed: {e}")
+        st.warning(f"FRED HY OAS failed: {e}")
         result["hy_oas"] = pd.Series(dtype=float)
 
     # yfinance — SPY, TLT, VIX
@@ -136,7 +131,7 @@ def _load_macro(start: str, end: str, _bust: int = 3) -> dict:
         result["vix_close"] = _col(close, "^VIX")
         result["spy_vol"]   = _col(volume, "SPY") if not volume.empty else pd.Series(dtype=float)
     except Exception as e:
-        st.sidebar.warning(f"yfinance fetch failed: {e}")
+        st.warning(f"yfinance fetch failed: {e}")
         for k in ("spy_close", "tlt_close", "vix_close", "spy_vol"):
             result.setdefault(k, pd.Series(dtype=float))
 
@@ -706,9 +701,9 @@ if _needs_run:
                     if not custom_series.empty:
                         targets[ric] = custom_series
                     else:
-                        st.sidebar.warning(f"No data found for '{ric}'.")
+                        st.warning(f"No data found for '{ric}'.")
                 except Exception as e2:
-                    st.sidebar.warning(f"Custom fetch failed: {e2}")
+                    st.warning(f"Custom fetch failed: {e2}")
 
     # ── Run detectors on each target ────────────────────────────────────────
     all_results: dict[str, dict] = {}

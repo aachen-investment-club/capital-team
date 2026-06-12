@@ -70,6 +70,8 @@ from lib.analysis import compute_metrics, metrics_html, legend_html
 st.set_page_config(page_title="Performance · AIC", page_icon=FAVICON, layout="wide")
 inject_css()
 st.title("Performance")
+with st.popover("ℹ"):
+    st.markdown("""Shows how the portfolio has performed over time, what each position contributed to returns, how weights have shifted across baskets, and a full log of every trade made.""")
 
 _TODAY    = date.today() - pd.Timedelta(days=1) 
 _DATE_MIN = date(2026, 5, 6)   # fund inception — first date in nav_history

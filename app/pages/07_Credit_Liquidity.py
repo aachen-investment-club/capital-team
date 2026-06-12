@@ -18,16 +18,17 @@ from lib.credit_liquidity import CreditFilter, LiquidityFilter, StressScore
 st.set_page_config(page_title="Credit & Liquidity · AIC", page_icon=FAVICON, layout="wide")
 inject_css()
 st.title("Credit & Liquidity Monitor")
+with st.popover("ℹ"):
+    st.markdown("""Tracks two early warning risk signals: credit stress (via high yield spreads from FRED) and market liquidity (via SPY microstructure). Combines them into a single stress score. Spikes here tend to precede broader market drawdowns.""")
 
-# ── Sidebar ───────────────────────────────────────────────────────────────────
+# ── Controls ──────────────────────────────────────────────────────────────────
 
-with st.sidebar:
-    st.header("Settings")
-    date_start = st.date_input("Start date", value=pd.Timestamp("2016-01-01").date())
-    date_end   = st.date_input("End date",   value=pd.Timestamp.today().date())
-    window     = st.slider("Z-score window (trading days)", 126, 756, 504,
-                           help="504 ≈ 2 years. Longer = more stable baselines.")
-    run_btn = st.button("Run", type="primary", use_container_width=True)
+_c1, _c2, _c3, _c4 = st.columns([1.2, 1.2, 2, 0.8])
+date_start = _c1.date_input("Start date", value=pd.Timestamp("2016-01-01").date())
+date_end   = _c2.date_input("End date",   value=pd.Timestamp.today().date())
+window     = _c3.slider("Z-score window (trading days)", 126, 756, 504,
+                        help="504 ≈ 2 years. Longer = more stable baselines.")
+run_btn    = _c4.button("Run", type="primary", use_container_width=True)
 
 
 # ── Data loading ──────────────────────────────────────────────────────────────
@@ -73,7 +74,7 @@ if run_btn:
     with st.spinner("Fetching data and running filters…"):
         raw = _fetch(str(date_start), str(date_end), _bust=2)
         for e in raw["errors"]:
-            st.sidebar.warning(e)
+            st.warning(e)
 
         if raw["hy_oas"].empty and raw["spy_close"].empty:
             st.error("No data loaded — check LSEG and FRED connectivity.")

@@ -17,6 +17,8 @@ st.set_page_config(page_title="Equities · AIC", page_icon=FAVICON, layout="wide
 inject_css()
 
 st.title("Equities")
+with st.popover("ℹ"):
+    st.markdown("""Ranks each holding by standard investment factors (momentum, valuation, and quality) so you can see at a glance which stocks are looking strong or weak relative to the rest.""")
 
 master = get_security_master()
 

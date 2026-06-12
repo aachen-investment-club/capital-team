@@ -19,30 +19,26 @@ from lib.trend import SMAFilter, KalmanFilter2D, GJRGarch, UKFFilter, forecast_l
 st.set_page_config(page_title="Trend Detection · AIC", page_icon=FAVICON, layout="wide")
 inject_css()
 st.title("Trend Detection")
+with st.popover("ℹ"):
+    st.markdown("""Runs Kalman filter and moving average models on each asset to extract the underlying price trend and estimate whether momentum is building or fading. The UKF variant adapts its noise model using GJR GARCH volatility so it reacts faster in stressed markets.""")
 
-# ── Sidebar ───────────────────────────────────────────────────────────────────
+# ── Controls ──────────────────────────────────────────────────────────────────
 
-with st.sidebar:
-    st.header("Settings")
-    date_start = st.date_input("Start date", value=pd.Timestamp("2022-01-01").date())
-    date_end   = st.date_input("End date",   value=pd.Timestamp.today().date())
+_r1c1, _r1c2, _r1c3, _r1c4, _r1c5, _r1c6 = st.columns([1.2, 1.2, 0.8, 0.8, 0.8, 1.5])
+date_start       = _r1c1.date_input("Start date", value=pd.Timestamp("2022-01-01").date())
+date_end         = _r1c2.date_input("End date",   value=pd.Timestamp.today().date())
+use_sma          = _r1c3.checkbox("SMA",          value=True)
+use_kalman       = _r1c4.checkbox("Kalman 2D",    value=True)
+use_ukf          = _r1c5.checkbox("UKF",          value=True)
+forecast_horizon = _r1c6.slider("Forecast horizon (days)", 5, 60, 20)
 
-    st.divider()
-    st.subheader("Filters")
-    use_sma    = st.checkbox("SMA",                    value=True)
-    use_kalman = st.checkbox("Kalman 2D",              value=True)
-    use_ukf    = st.checkbox("Unscented Kalman (UKF)", value=True)
-    sma_window = st.slider("SMA window", 10, 200, 50) if use_sma else 50
-
-    st.divider()
-    st.subheader("UKF inputs")
-    use_gjr    = st.checkbox("GJR-GARCH vol",           value=True,
+_r2c1, _r2c2, _r2c3, _r2c4 = st.columns([1, 1, 1, 3])
+sma_window = _r2c1.slider("SMA window", 10, 200, 50) if use_sma else 50
+use_gjr    = _r2c2.checkbox("GJR-GARCH vol",           value=True,
                              help="Fits GJR-GARCH(1,1,1) per asset.")
-    use_stress = st.checkbox("Credit/Liquidity stress", value=True,
+use_stress = _r2c3.checkbox("Credit/Liquidity stress", value=True,
                              help="Pulls stress score from the Credit & Liquidity page if run.")
-
-    st.divider()
-    forecast_horizon = st.slider("Forecast horizon (days)", 5, 60, 20)
+st.divider()
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -463,7 +459,7 @@ tab_bench, tab_pos, tab_agg, tab_custom = st.tabs([
 
 stress = _get_stress() if use_stress else pd.Series(dtype=float)
 if use_stress and stress.empty:
-    st.sidebar.info("No stress data — run Credit & Liquidity page first.")
+    st.info("No stress data — run Credit & Liquidity page first.")
 
 # Param key used to detect when settings change and results need refreshing
 _trend_params = (

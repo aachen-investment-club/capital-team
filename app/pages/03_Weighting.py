@@ -21,43 +21,30 @@ from lib.weighting import build_basket_stats, get_weights, efficient_frontier, p
 st.set_page_config(page_title="Weighting · AIC", page_icon=FAVICON, layout="wide")
 inject_css()
 st.title("Portfolio Optimiser")
+with st.popover("ℹ"):
+    st.markdown("""Shows current and historical allocation by position and basket, and runs a quadratic optimiser to suggest better weights given your risk aversion and beta constraints.""")
 
 _TODAY    = date.today() - pd.Timedelta(days=1)
 _DATE_MIN = date(2024, 1, 1)
 
 
-# ── Sidebar controls ──────────────────────────────────────────────────────────
+# ── Controls ──────────────────────────────────────────────────────────────────
 
-with st.sidebar:
-    st.header("Optimiser Settings")
-
-    backtest_from = st.date_input(
-        "Backtest data from",
-        value=date(2025, 1, 1),
-        min_value=_DATE_MIN,
-        max_value=_TODAY,
-        help="Use EOD price history starting from this date to estimate returns, vol, and beta.",
-    )
-
-    risk_aversion = st.slider(
-        "Risk aversion (λ)",
-        min_value=0.1,
-        max_value=5.0,
-        value=1.0,
-        step=0.1,
-        help="Higher λ penalises volatility more and pushes weights toward lower-risk assets.",
-    )
-
-    max_beta = st.slider(
-        "Max portfolio beta",
-        min_value=0.3,
-        max_value=2.0,
-        value=1.0,
-        step=0.05,
-        help="Upper bound on the weighted-average beta of the optimised portfolio vs SPX.",
-    )
-
-    run_btn = st.button("Run Optimiser", type="primary", use_container_width=True)
+_c1, _c2, _c3, _c4 = st.columns([1.5, 1.5, 1.5, 0.8])
+backtest_from = _c1.date_input(
+    "Backtest data from", value=date(2025, 1, 1),
+    min_value=_DATE_MIN, max_value=_TODAY,
+    help="Use EOD price history starting from this date to estimate returns, vol, and beta.",
+)
+risk_aversion = _c2.slider(
+    "Risk aversion (λ)", min_value=0.1, max_value=5.0, value=1.0, step=0.1,
+    help="Higher λ penalises volatility more and pushes weights toward lower-risk assets.",
+)
+max_beta = _c3.slider(
+    "Max portfolio beta", min_value=0.3, max_value=2.0, value=1.0, step=0.05,
+    help="Upper bound on the weighted-average beta of the optimised portfolio vs SPX.",
+)
+run_btn = _c4.button("Run Optimiser", type="primary", use_container_width=True)
 
 
 # ── Data loading ──────────────────────────────────────────────────────────────

@@ -19,16 +19,17 @@ from lib.correlation import RollingCorr, PartialCorr
 st.set_page_config(page_title="Correlation · AIC", page_icon=FAVICON, layout="wide")
 inject_css()
 st.title("Correlation Analysis")
+with st.popover("ℹ"):
+    st.markdown("""Measures how much our assets move together on a rolling basis. Useful for spotting when supposed diversifiers are no longer diversifying, or when a macro regime shift is causing previously uncorrelated assets to move in lockstep.""")
 
-# ── Sidebar ───────────────────────────────────────────────────────────────────
+# ── Controls ──────────────────────────────────────────────────────────────────
 
-with st.sidebar:
-    st.header("Settings")
-    date_start = st.date_input("Start date", value=pd.Timestamp("2020-01-01").date())
-    date_end   = st.date_input("End date",   value=pd.Timestamp.today().date())
-    window_corr   = st.slider("Rolling window (days)",  10, 120, 30)
-    window_smooth = st.slider("Smoothing window (days)",  5,  40, 10)
-    run_btn = st.button("Run", type="primary", use_container_width=True)
+_c1, _c2, _c3, _c4, _c5 = st.columns([1.2, 1.2, 1.2, 1.2, 0.8])
+date_start    = _c1.date_input("Start date", value=pd.Timestamp("2020-01-01").date())
+date_end      = _c2.date_input("End date",   value=pd.Timestamp.today().date())
+window_corr   = _c3.slider("Rolling window (days)",  10, 120, 30)
+window_smooth = _c4.slider("Smoothing window (days)",  5,  40, 10)
+run_btn       = _c5.button("Run", type="primary", use_container_width=True)
 
 # ── Fixed pairs ───────────────────────────────────────────────────────────────
 
@@ -72,7 +73,7 @@ def _load_prices(tickers: tuple, start: str, end: str) -> pd.DataFrame:
             vix.index = pd.to_datetime(vix.index)
             cols["VIX"] = vix.rename("VIX")
         except Exception as e:
-            st.sidebar.warning(f"VIX fetch failed: {e}")
+            st.warning(f"VIX fetch failed: {e}")
 
     # All other tickers via LSEG (one call per ticker)
     lseg_tickers = [t for t in tickers if t != "VIX"]
@@ -96,7 +97,7 @@ def _load_prices(tickers: tuple, start: str, end: str) -> pd.DataFrame:
                         s = s.apply(pd.to_numeric, errors="coerce").dropna(how="all")
                         cols[ticker] = s.iloc[:, 0].rename(ticker)
                 except Exception as e:
-                    st.sidebar.warning(f"{ticker} fetch failed: {e}")
+                    st.warning(f"{ticker} fetch failed: {e}")
             try:
                 ld.close_session()
             except Exception:
