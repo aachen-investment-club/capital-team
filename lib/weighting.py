@@ -193,3 +193,139 @@ def portfolio_stats(
         "Ann Vol":    float(np.sqrt(w.T @ S @ w)),
         "Beta":       float(betas @ w),
     }
+
+
+# ── Scheme comparison ─────────────────────────────────────────────────────────
+
+def build_price_matrix(
+    security_master: pd.DataFrame,
+    get_eod_prices_fn,
+    cache_version: str,
+) -> pd.DataFrame:
+    """Daily adj_close for all active non-index securities over the last 1 year."""
+    cutoff = pd.Timestamp.today() - pd.DateOffset(years=1)
+    cols = {}
+    for _, row in security_master.iterrows():
+        eod = get_eod_prices_fn(row["security_id"], cache_version)
+        if eod.empty:
+            continue
+        eod = eod.copy()
+        eod["date"] = pd.to_datetime(eod["date"])
+        col = "adj_close" if "adj_close" in eod.columns else "close"
+        s = eod[eod["date"] >= cutoff].set_index("date")[col].dropna()
+        if len(s) >= 30:
+            cols[row["ticker"]] = s
+    if not cols:
+        return pd.DataFrame()
+    return pd.DataFrame(cols).sort_index().ffill()
+
+
+def scheme_nav(
+    prices: pd.DataFrame,
+    scheme: str,
+    rebal_freq: str | None,
+    spx_rets: pd.Series | None = None,
+) -> pd.Series:
+    """Simulate a portfolio under a given weighting scheme.
+
+    Parameters
+    ----------
+    prices     : daily price matrix (tickers as columns)
+    scheme     : 'equal' | 'inv_vol' | 'momentum' | 'beta'
+    rebal_freq : pandas offset string ('B', 'W-FRI', 'MS') or None for buy-and-hold
+    spx_rets   : required for scheme='beta' (rolling 63d beta, weight inversely proportional)
+    """
+    prices = prices.astype(float)
+    if prices.empty:
+        return pd.Series(dtype=float)
+
+    rets = prices.pct_change().fillna(0)
+    n    = len(prices.columns)
+    nav  = pd.Series(index=prices.index, dtype=float)
+    nav.iloc[0] = 1.0
+
+    rebal_set = (
+        set(pd.date_range(prices.index[0], prices.index[-1], freq=rebal_freq).normalize())
+        if rebal_freq else set()
+    )
+
+    spx_aligned = None
+    if scheme == "beta" and spx_rets is not None:
+        spx_aligned = spx_rets.reindex(rets.index).fillna(0)
+
+    current_w = None
+
+    for i in range(1, len(prices)):
+        dt = prices.index[i].normalize()
+
+        if current_w is None or (rebal_freq and dt in rebal_set):
+            lookback      = prices.iloc[max(0, i - 63):i]
+            lookback_rets = rets.iloc[max(0, i - 63):i]
+
+            if scheme == "equal":
+                w = np.ones(n) / n
+
+            elif scheme == "inv_vol":
+                vols = lookback.pct_change().std().replace(0, np.nan)
+                inv  = 1.0 / vols
+                w    = (inv / inv.sum()).fillna(1 / n).values
+
+            elif scheme == "momentum":
+                ret_63  = (lookback.iloc[-1] / lookback.iloc[0] - 1).replace([np.inf, -np.inf], np.nan)
+                clipped = ret_63.clip(lower=0).fillna(0)
+                total   = clipped.sum()
+                w = (clipped / total).values if total > 0 else np.ones(n) / n
+
+            elif scheme == "beta" and spx_aligned is not None:
+                spx_lb  = spx_aligned.iloc[max(0, i - 63):i]
+                spx_var = float(spx_lb.var())
+                betas   = pd.Series(index=prices.columns, dtype=float)
+                for col in prices.columns:
+                    cov = float(lookback_rets[col].cov(spx_lb))
+                    betas[col] = cov / spx_var if spx_var > 1e-12 else 0.0
+                betas    = betas.clip(lower=1e-6)
+                inv_beta = (1.0 / betas).replace([np.inf, -np.inf], np.nan)
+                total    = inv_beta.sum()
+                w = (inv_beta / total).fillna(1 / n).values if total > 0 else np.ones(n) / n
+
+            else:
+                w = np.ones(n) / n
+
+            current_w = w
+
+        nav.iloc[i] = nav.iloc[i - 1] * (1 + float(np.dot(current_w, rets.iloc[i].values)))
+
+    return nav.rename(scheme)
+
+
+def scheme_nav_fixed(prices: pd.DataFrame, weights: np.ndarray) -> pd.Series:
+    """Simulate a buy-and-hold portfolio with fixed static weights (no rebalancing)."""
+    prices = prices.astype(float)
+    rets   = prices.pct_change().fillna(0)
+    w      = np.array(weights)
+    if w.sum() > 0:
+        w = w / w.sum()
+    nav = pd.Series(index=prices.index, dtype=float)
+    nav.iloc[0] = 1.0
+    for i in range(1, len(prices)):
+        nav.iloc[i] = nav.iloc[i - 1] * (1 + float(np.dot(w, rets.iloc[i].values)))
+    return nav
+
+
+def scheme_stats(nav: pd.Series, label: str) -> dict:
+    """Return summary stats for a NAV series."""
+    s       = nav.dropna()
+    rets    = s.pct_change().dropna()
+    ann_ret = float(rets.mean() * 252)
+    ann_vol = float(rets.std() * np.sqrt(252))
+    sharpe  = ann_ret / ann_vol if ann_vol > 0 else 0.0
+    dd      = float((s / s.cummax() - 1).min())
+    total   = float(s.iloc[-1] / s.iloc[0] - 1)
+    return {
+        "Scheme":       label,
+        "Total return": total,
+        "Ann return":   ann_ret,
+        "Ann vol":      ann_vol,
+        "Sharpe":       sharpe,
+        "Max drawdown": dd,
+    }
