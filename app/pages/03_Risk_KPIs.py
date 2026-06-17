@@ -37,28 +37,35 @@ with c2:
         "To", value=_TODAY, min_value=_DATE_MIN, max_value=_TODAY, key="risk_end"
     )
 with c3:
-    bm_label = st.selectbox("Benchmark (Beta / Alpha)", list(BENCHMARKS.keys()), key="bm_sel")
+    bm_label  = st.selectbox("Benchmark (Beta / Alpha)", list(BENCHMARKS.keys()), key="bm_sel")
     bm_ticker = BENCHMARKS[bm_label]
 with c4:
-    rf_pct = st.slider("Risk-Free Rate (% p.a.)", 0.0, 10.0, 3.5, 0.1, key="rf_rate")
+    rf_pct  = st.slider("Risk-Free Rate (% p.a.)", 0.0, 10.0, 3.5, 0.1, key="rf_rate")
     rf_rate = rf_pct / 100.0
+
+if risk_start >= risk_end:
+    st.warning("'From' date must be before 'To' date.")
+    st.stop()
 
 
 # ── Data helpers ───────────────────────────────────────────────────────────────
 
 @st.cache_data
 def _portfolio_daily_returns(start: date, end: date) -> pd.Series:
-    """Weighted daily portfolio return derived from get_daily_weightings_history()."""
-    df = get_daily_weightings_history()
-    df["daily_return"] = df["daily_return"].fillna(0.0)
-    df = df[df["date"].between(pd.Timestamp(start), pd.Timestamp(end))]
-    port_r = (
-        df.groupby("date")
-        .apply(lambda x: (x["pct_nav"] / 100.0 * x["daily_return"]).sum())
-        .rename("portfolio_return")
-        .sort_index()
+    df = get_portfolio_and_benchmarks()
+    mask = (df["ticker"] == "PORTFOLIO") & df["date"].between(
+        pd.Timestamp(start), pd.Timestamp(end)
     )
-    return port_r
+    return df[mask].set_index("date")["daily_return"].sort_index()
+
+
+@st.cache_data
+def _stock_daily_returns(symbol: str, start: date, end: date) -> pd.Series:
+    df = get_daily_weightings_history()
+    mask = (df["symbol"] == symbol) & df["date"].between(
+        pd.Timestamp(start), pd.Timestamp(end)
+    )
+    return df[mask].set_index("date")["daily_return"].sort_index()
 
 
 @st.cache_data
@@ -70,11 +77,7 @@ def _benchmark_daily_returns(ticker: str, start: date, end: date) -> pd.Series:
     return df[mask].set_index("date")["daily_return"].sort_index()
 
 
-@st.cache_data
-def _compute_kpis(start: date, end: date, bm: str, rf: float) -> dict:
-    r   = _portfolio_daily_returns(start, end)
-    bm_r = _benchmark_daily_returns(bm, start, end)
-
+def _compute_kpis(r: pd.Series, bm_r: pd.Series, rf: float) -> dict:
     aligned = pd.DataFrame({"r": r, "bm": bm_r}).dropna()
     if len(aligned) < 5:
         return {}
@@ -83,34 +86,23 @@ def _compute_kpis(start: date, end: date, bm: str, rf: float) -> dict:
     bm_r = aligned["bm"]
     rf_d = rf / 252.0
 
-    # Volatility (annualised)
-    vol = float(r.std() * np.sqrt(252))
-
-    # Annualised return
+    vol     = float(r.std() * np.sqrt(252))
     ann_ret = float((1 + r).prod() ** (252.0 / len(r)) - 1)
 
-    # Sharpe
-    excess = r - rf_d
-    sharpe = float(excess.mean() / r.std() * np.sqrt(252)) if r.std() > 0 else float("nan")
+    excess  = r - rf_d
+    sharpe  = float(excess.mean() / r.std() * np.sqrt(252)) if r.std() > 0 else float("nan")
 
-    # Sortino — downside deviation relative to rf
     downside = r[r < rf_d] - rf_d
     ds_std   = float(downside.std()) if len(downside) > 1 else float("nan")
     sortino  = float(excess.mean() / ds_std * np.sqrt(252)) if (ds_std and ds_std > 0) else float("nan")
 
-    # Drawdown
-    cum  = (1 + r).cumprod()
-    dd   = cum / cum.cummax() - 1
+    cum    = (1 + r).cumprod()
+    dd     = cum / cum.cummax() - 1
     max_dd = float(dd.min())
-
-    # Calmar
     calmar = ann_ret / abs(max_dd) if max_dd != 0 else float("nan")
 
-    # Beta (CAPM)
     cov_m = np.cov(r.values, bm_r.values)
     beta  = float(cov_m[0, 1] / cov_m[1, 1]) if cov_m[1, 1] > 0 else float("nan")
-
-    # Jensen's Alpha (annualised)
     alpha = (
         float((excess.mean() - beta * (bm_r - rf_d).mean()) * 252)
         if not np.isnan(beta) else float("nan")
@@ -124,30 +116,28 @@ def _compute_kpis(start: date, end: date, bm: str, rf: float) -> dict:
     }
 
 
-# ── Guard ──────────────────────────────────────────────────────────────────────
-if risk_start >= risk_end:
-    st.warning("'From' date must be before 'To' date.")
-    st.stop()
-
-try:
-    kpis = _compute_kpis(risk_start, risk_end, bm_ticker, rf_rate)
-except Exception as exc:
-    st.error(f"Could not compute KPIs: {exc}")
-    st.stop()
-
-if not kpis:
-    st.info("Not enough overlapping data in the selected range.")
-    st.stop()
-
-r  = kpis["r"]
-st.caption(
-    f"{kpis['n']} trading days · "
-    f"{risk_start.strftime('%d %b %Y')} → {risk_end.strftime('%d %b %Y')} · "
-    f"Benchmark: {bm_label} · rf = {rf_pct:.1f}%"
-)
+@st.cache_data
+def _compute_portfolio_kpis(start: date, end: date, bm: str, rf: float) -> dict:
+    r    = _portfolio_daily_returns(start, end)
+    bm_r = _benchmark_daily_returns(bm, start, end)
+    return _compute_kpis(r, bm_r, rf)
 
 
-# ── KPI metric cards ───────────────────────────────────────────────────────────
+@st.cache_data
+def _compute_stock_kpis(symbol: str, start: date, end: date, bm: str, rf: float) -> dict:
+    r    = _stock_daily_returns(symbol, start, end)
+    bm_r = _benchmark_daily_returns(bm, start, end)
+    return _compute_kpis(r, bm_r, rf)
+
+
+@st.cache_data
+def _equity_symbols() -> list[tuple[str, str]]:
+    df = get_daily_weightings_history()
+    stocks = df[df["category"] != "Cash"][["symbol", "name"]].drop_duplicates()
+    return sorted(stocks.itertuples(index=False, name=None), key=lambda x: x[0])
+
+
+# ── Shared rendering helpers ───────────────────────────────────────────────────
 
 def _fmt_pct(v: float) -> str:
     return f"{v:.1%}" if not np.isnan(v) else "–"
@@ -156,85 +146,130 @@ def _fmt_x(v: float, decimals: int = 2) -> str:
     return f"{v:.{decimals}f}" if not np.isnan(v) else "–"
 
 
-cols = st.columns(7)
-cards = [
-    ("Volatility (ann.)", _fmt_pct(kpis["vol"])),
-    ("Sharpe Ratio",      _fmt_x(kpis["sharpe"])),
-    ("Sortino Ratio",     _fmt_x(kpis["sortino"])),
-    ("Max Drawdown",      _fmt_pct(kpis["max_dd"])),
-    ("Calmar Ratio",      _fmt_x(kpis["calmar"])),
-    ("Beta",              _fmt_x(kpis["beta"])),
-    ("Alpha (ann.)",      _fmt_pct(kpis["alpha"])),
-]
-for col, (label, value) in zip(cols, cards):
-    with col:
-        st.metric(label, value)
-
-st.divider()
-
-
-# ── Charts ─────────────────────────────────────────────────────────────────────
-rf_d = rf_rate / 252.0
-tab_dd, tab_vol, tab_sharpe = st.tabs(["Drawdown", "Rolling Volatility", "Rolling Sharpe"])
-
-with tab_dd:
-    dd = kpis["dd"]
-    fig = go.Figure(go.Scatter(
-        x=dd.index, y=dd.values,
-        fill="tozeroy",
-        fillcolor="rgba(239,68,68,0.12)",
-        line=dict(color="#EF4444", width=1.5),
-        hovertemplate="%{x|%d %b %Y}: %{y:.1%}<extra></extra>",
-    ))
-    fig.update_layout(
-        title="Portfolio Drawdown",
-        yaxis_tickformat=".0%",
-        yaxis_title="Drawdown",
-        xaxis_title="",
-        showlegend=False,
-        template="capital",
+def _render_kpis(kpis: dict, label: str, rf_pct: float, bm_label: str) -> None:
+    st.caption(
+        f"{kpis['n']} trading days · "
+        f"{risk_start.strftime('%d %b %Y')} → {risk_end.strftime('%d %b %Y')} · "
+        f"Benchmark: {bm_label} · rf = {rf_pct:.1f}%"
     )
-    fig.update_xaxes(rangebreaks=[dict(bounds=["sat", "mon"])])
-    st.plotly_chart(fig, width="stretch")
 
-with tab_vol:
-    rv30 = r.rolling(30).std() * np.sqrt(252)
-    rv90 = r.rolling(90).std() * np.sqrt(252)
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=rv30.index, y=rv30.values, name="30-day",
-        line=dict(color=NAVY, width=2),
-        hovertemplate="%{x|%d %b %Y}: %{y:.1%}<extra></extra>",
-    ))
-    fig.add_trace(go.Scatter(
-        x=rv90.index, y=rv90.values, name="90-day",
-        line=dict(color="#B8962E", width=2),
-        hovertemplate="%{x|%d %b %Y}: %{y:.1%}<extra></extra>",
-    ))
-    fig.update_layout(
-        title="Rolling Volatility (Annualized)",
-        yaxis_tickformat=".0%",
-        yaxis_title="Volatility",
-        xaxis_title="",
-        template="capital",
-    )
-    fig.update_xaxes(rangebreaks=[dict(bounds=["sat", "mon"])])
-    st.plotly_chart(fig, width="stretch")
+    cols = st.columns(7)
+    cards = [
+        ("Volatility (ann.)", _fmt_pct(kpis["vol"])),
+        ("Sharpe Ratio",      _fmt_x(kpis["sharpe"])),
+        ("Sortino Ratio",     _fmt_x(kpis["sortino"])),
+        ("Max Drawdown",      _fmt_pct(kpis["max_dd"])),
+        ("Calmar Ratio",      _fmt_x(kpis["calmar"])),
+        ("Beta",              _fmt_x(kpis["beta"])),
+        ("Alpha (ann.)",      _fmt_pct(kpis["alpha"])),
+    ]
+    for col, (card_label, value) in zip(cols, cards):
+        with col:
+            st.metric(card_label, value)
 
-with tab_sharpe:
-    rs90 = (r - rf_d).rolling(90).mean() / r.rolling(90).std() * np.sqrt(252)
-    fig = go.Figure(go.Scatter(
-        x=rs90.index, y=rs90.values,
-        line=dict(color=NAVY, width=2),
-        hovertemplate="%{x|%d %b %Y}: %{y:.2f}<extra></extra>",
-    ))
-    fig.add_hline(y=0, line_dash="dot", line_color="#BFDBFE")
-    fig.update_layout(
-        title="Rolling Sharpe Ratio (90-day)",
-        yaxis_title="Sharpe Ratio",
-        xaxis_title="",
-        showlegend=False,
-        template="capital",
-    )
-    fig.update_xaxes(rangebreaks=[dict(bounds=["sat", "mon"])])
-    st.plotly_chart(fig, width="stretch")
+    st.divider()
+
+    r    = kpis["r"]
+    dd   = kpis["dd"]
+    rf_d = rf_rate / 252.0
+
+    tab_dd, tab_vol, tab_sharpe = st.tabs(["Drawdown", "Rolling Volatility", "Rolling Sharpe"])
+
+    with tab_dd:
+        fig = go.Figure(go.Scatter(
+            x=dd.index, y=dd.values,
+            fill="tozeroy",
+            fillcolor="rgba(239,68,68,0.12)",
+            line=dict(color="#EF4444", width=1.5),
+            hovertemplate="%{x|%d %b %Y}: %{y:.1%}<extra></extra>",
+        ))
+        fig.update_layout(
+            title=f"{label} Drawdown",
+            yaxis_tickformat=".0%",
+            yaxis_title="Drawdown",
+            xaxis_title="",
+            showlegend=False,
+            template="capital",
+        )
+        fig.update_xaxes(rangebreaks=[dict(bounds=["sat", "mon"])])
+        st.plotly_chart(fig, width="stretch")
+
+    with tab_vol:
+        rv30 = r.rolling(30).std() * np.sqrt(252)
+        rv90 = r.rolling(90).std() * np.sqrt(252)
+        fig  = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=rv30.index, y=rv30.values, name="30-day",
+            line=dict(color=NAVY, width=2),
+            hovertemplate="%{x|%d %b %Y}: %{y:.1%}<extra></extra>",
+        ))
+        fig.add_trace(go.Scatter(
+            x=rv90.index, y=rv90.values, name="90-day",
+            line=dict(color="#B8962E", width=2),
+            hovertemplate="%{x|%d %b %Y}: %{y:.1%}<extra></extra>",
+        ))
+        fig.update_layout(
+            title=f"{label} Rolling Volatility (Annualized)",
+            yaxis_tickformat=".0%",
+            yaxis_title="Volatility",
+            xaxis_title="",
+            template="capital",
+        )
+        fig.update_xaxes(rangebreaks=[dict(bounds=["sat", "mon"])])
+        st.plotly_chart(fig, width="stretch")
+
+    with tab_sharpe:
+        rs90 = (r - rf_d).rolling(90).mean() / r.rolling(90).std() * np.sqrt(252)
+        fig  = go.Figure(go.Scatter(
+            x=rs90.index, y=rs90.values,
+            line=dict(color=NAVY, width=2),
+            hovertemplate="%{x|%d %b %Y}: %{y:.2f}<extra></extra>",
+        ))
+        fig.add_hline(y=0, line_dash="dot", line_color="#BFDBFE")
+        fig.update_layout(
+            title=f"{label} Rolling Sharpe Ratio (90-day)",
+            yaxis_title="Sharpe Ratio",
+            xaxis_title="",
+            showlegend=False,
+            template="capital",
+        )
+        fig.update_xaxes(rangebreaks=[dict(bounds=["sat", "mon"])])
+        st.plotly_chart(fig, width="stretch")
+
+
+# ── Tabs ───────────────────────────────────────────────────────────────────────
+
+tab_portfolio, tab_stock = st.tabs(["Portfolio", "Single Stock"])
+
+with tab_portfolio:
+    try:
+        kpis = _compute_portfolio_kpis(risk_start, risk_end, bm_ticker, rf_rate)
+    except Exception as exc:
+        st.error(f"Could not compute KPIs: {exc}")
+        st.stop()
+
+    if not kpis:
+        st.info("Not enough data in the selected range.")
+    else:
+        _render_kpis(kpis, "Portfolio", rf_pct, bm_label)
+
+with tab_stock:
+    symbols = _equity_symbols()
+    if not symbols:
+        st.info("No equity positions found.")
+    else:
+        options      = [f"{sym} – {name}" for sym, name in symbols]
+        sym_map      = {f"{sym} – {name}": sym for sym, name in symbols}
+        selected_opt = st.selectbox("Stock", options, key="stock_sel")
+        selected_sym = sym_map[selected_opt]
+
+        try:
+            kpis = _compute_stock_kpis(selected_sym, risk_start, risk_end, bm_ticker, rf_rate)
+        except Exception as exc:
+            st.error(f"Could not compute KPIs: {exc}")
+            st.stop()
+
+        if not kpis:
+            st.info("Not enough data for this stock in the selected range.")
+        else:
+            _render_kpis(kpis, selected_sym, rf_pct, bm_label)
