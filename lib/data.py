@@ -338,6 +338,24 @@ def get_market_ohlcv(ticker: str) -> pd.DataFrame:
         df["date"] = pd.to_datetime(df["date"])
         return df.set_index("date")
     except Exception:
+        pass
+    try:
+        import yfinance as yf
+        yf_ticker = "^VIX" if ticker == "VIX" else ticker
+        raw = yf.download(yf_ticker, period="10y", progress=False, auto_adjust=True)
+        if raw.empty:
+            return pd.DataFrame(columns=["close", "volume"])
+        # flatten MultiIndex columns (newer yfinance returns (field, ticker) tuples)
+        if isinstance(raw.columns, pd.MultiIndex):
+            raw.columns = [c[0] for c in raw.columns]
+        raw.columns = [str(c).lower() for c in raw.columns]
+        raw.index = pd.to_datetime(raw.index)
+        df = pd.DataFrame({
+            "close":  raw["close"].squeeze(),
+            "volume": raw["volume"].squeeze() if "volume" in raw.columns else 0.0,
+        })
+        return df
+    except Exception:
         return pd.DataFrame(columns=["close", "volume"])
 
 
