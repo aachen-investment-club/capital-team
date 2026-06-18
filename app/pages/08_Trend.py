@@ -11,7 +11,6 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import pandas as pd
 import numpy as np
-import yfinance as yf
 
 from lib.theme import inject_css, FAVICON
 from lib.trend import SMAFilter, KalmanFilter2D, GJRGarch, UKFFilter, forecast_linear
@@ -66,64 +65,44 @@ def _hex_rgba(hex_color: str, alpha: float) -> str:
 
 @st.cache_data(ttl=3600, show_spinner=False)
 def _load_benchmark_prices(start: str, end: str) -> pd.DataFrame:
-    tickers = list(BENCHMARKS.keys())
-    raw = yf.download(tickers, start=start, end=end,
-                      progress=False, auto_adjust=True)["Close"]
-    if isinstance(raw, pd.Series):
-        raw = raw.to_frame()
-    raw.index = pd.to_datetime(raw.index)
-    return raw.apply(pd.to_numeric, errors="coerce").dropna(how="all")
+    from lib.data import get_market_prices
+    cols = {}
+    for ticker in BENCHMARKS.keys():
+        s = get_market_prices(ticker).loc[start:end]
+        if not s.empty:
+            cols[ticker] = s
+    if not cols:
+        return pd.DataFrame()
+    df = pd.DataFrame(cols)
+    df.index = pd.to_datetime(df.index)
+    return df.apply(pd.to_numeric, errors="coerce").dropna(how="all")
 
 
 @st.cache_data(ttl=3600, show_spinner=False)
 def _load_portfolio_positions_lseg(start: str, end: str) -> dict[str, pd.Series]:
-    """Fetch prices for ALL active holdings (equities + ETFs) via LSEG."""
-    import lseg.data as ld
-    from lib.data import get_security_master, get_daily_weightings_history
-
+    """Load prices for active holdings from S3 EOD data via lib.data."""
+    from lib.data import get_security_master, get_daily_weightings_history, get_eod_prices, _eod_data_version
     sm = get_security_master()
-
-    # Filter to current holdings only
     wh = get_daily_weightings_history()
     if not wh.empty:
         latest_date     = wh["date"].max()
         current_symbols = set(wh[wh["date"] == latest_date]["symbol"].tolist())
-        sm = sm[sm["ticker"].isin(current_symbols) | sm["ric"].isin(current_symbols)]
-
-    # Exclude pure INDEX types but keep ETFs
+        sm = sm[sm["ticker"].isin(current_symbols)]
     sm = sm[sm["asset_type"] != "INDEX"]
     if sm.empty:
         return {}
-
-    ric_to_ticker = dict(zip(sm["ric"].astype(str), sm["ticker"].astype(str)))
-
+    version = _eod_data_version()
     out = {}
-    try:
-        ld.open_session()
-        for ric, ticker in ric_to_ticker.items():
-            try:
-                raw = ld.get_history(
-                    universe=[ric],
-                    fields=["TR.PriceClose"],
-                    parameters={"Adjusted": 1},
-                    start=start, end=end, interval="1D",
-                )
-                if raw is None or raw.empty:
-                    continue
-                s = raw.copy()
-                s.index = pd.to_datetime(s.index)
-                s = s.apply(pd.to_numeric, errors="coerce").dropna(how="all")
-                series = s.iloc[:, 0].dropna().sort_index()
-                if len(series) >= 20:
-                    out[ticker] = series.rename(ticker)
-            except Exception:
-                pass
-    finally:
-        try:
-            ld.close_session()
-        except Exception:
-            pass
-
+    for _, row in sm.iterrows():
+        eod = get_eod_prices(row["security_id"], version)
+        if eod.empty:
+            continue
+        eod = eod.copy()
+        eod["date"] = pd.to_datetime(eod["date"])
+        col = "adj_close" if "adj_close" in eod.columns else "close"
+        s = eod.set_index("date")[col].loc[start:end].dropna().sort_index()
+        if len(s) >= 20:
+            out[row["ticker"]] = s.rename(row["ticker"])
     return out
 
 
@@ -138,38 +117,30 @@ def _load_portfolio_aggregate(start: str, end: str) -> pd.Series:
 
 @st.cache_data(ttl=3600, show_spinner=False)
 def _load_custom_lseg(ric: str, start: str, end: str) -> pd.Series:
-    import lseg.data as ld
-    try:
-        ld.open_session()
-        raw = ld.get_history(
-            universe=[ric],
-            fields=["TR.PriceClose"],
-            parameters={"Adjusted": 1},
-            start=start, end=end, interval="1D",
-        )
-        if raw is None or raw.empty:
-            return pd.Series(dtype=float)
-        s = raw.copy()
-        s.index = pd.to_datetime(s.index)
-        s = s.apply(pd.to_numeric, errors="coerce").dropna(how="all")
-        return s.iloc[:, 0].dropna().sort_index().rename(ric)
-    except Exception as e:
-        raise e
-    finally:
-        try:
-            ld.close_session()
-        except Exception:
-            pass
+    """Fetch a custom LSEG RIC — used only for ad-hoc search, not regular data."""
+    from lib.data import get_security_master, get_eod_prices, _eod_data_version
+    sm = get_security_master()
+    match = sm[sm["ric"] == ric]
+    if not match.empty:
+        version = _eod_data_version()
+        eod = get_eod_prices(match.iloc[0]["security_id"], version)
+        if not eod.empty:
+            eod["date"] = pd.to_datetime(eod["date"])
+            col = "adj_close" if "adj_close" in eod.columns else "close"
+            return eod.set_index("date")[col].loc[start:end].dropna().sort_index().rename(ric)
+    # Fallback: try market data store
+    from lib.data import get_market_prices
+    ticker = ric.split(".")[0]
+    s = get_market_prices(ticker).loc[start:end]
+    if not s.empty:
+        return s.rename(ric)
+    return pd.Series(dtype=float)
 
 
 @st.cache_data(ttl=3600, show_spinner=False)
 def _load_custom_yf(ticker: str, start: str, end: str) -> pd.Series:
-    raw = yf.download(ticker, start=start, end=end,
-                      progress=False, auto_adjust=True)["Close"]
-    if isinstance(raw, pd.DataFrame):
-        raw = raw.iloc[:, 0]
-    raw.index = pd.to_datetime(raw.index)
-    return raw.dropna().sort_index().rename(ticker)
+    from lib.data import get_market_prices
+    return get_market_prices(ticker).loc[start:end].rename(ticker)
 
 
 # ── Stress ────────────────────────────────────────────────────────────────────

@@ -8,6 +8,18 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Sync config files to S3
+        env:
+          AWS_ACCESS_KEY_ID:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION:    eu-central-1
+        run: |
+          aws s3 cp config/security_master.csv s3://aic-fund-public-data/config/security_master.csv
+          aws s3 cp config/barra_universe.csv  s3://aic-fund-public-data/config/barra_universe.csv
+
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:

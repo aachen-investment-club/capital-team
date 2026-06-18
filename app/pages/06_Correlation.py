@@ -55,62 +55,19 @@ LSEG_MAP = {
 
 @st.cache_data(ttl=3600, show_spinner=False)
 def _load_prices(tickers: tuple, start: str, end: str) -> pd.DataFrame:
-    """Fetch daily close prices from LSEG (TR.PriceClose) + yfinance for VIX."""
-    import lseg.data as ld
-    import yfinance as yf
-    from dotenv import load_dotenv
-    import pathlib as _pl
-    load_dotenv(_pl.Path(__file__).resolve().parent.parent.parent / ".env")
-
+    """Load daily close prices for correlation tickers from S3 via lib.data."""
+    from lib.data import get_market_prices
     cols = {}
-
-    # VIX via yfinance (LSEG doesn't carry it reliably)
-    if "VIX" in tickers:
+    for ticker in tickers:
         try:
-            vix = yf.download("^VIX", start=start, end=end, progress=False)["Close"]
-            if isinstance(vix, pd.DataFrame):
-                vix = vix.iloc[:, 0]
-            vix.index = pd.to_datetime(vix.index)
-            cols["VIX"] = vix.rename("VIX")
+            s = get_market_prices(ticker).loc[start:end]
+            if not s.empty:
+                cols[ticker] = s.rename(ticker)
         except Exception as e:
-            st.warning(f"VIX fetch failed: {e}")
-
-    # All other tickers via LSEG (one call per ticker)
-    lseg_tickers = [t for t in tickers if t != "VIX"]
-    if lseg_tickers:
-        try:
-            ld.open_session()
-            for ticker in lseg_tickers:
-                ric = LSEG_MAP.get(ticker, ticker)
-                try:
-                    raw = ld.get_history(
-                        universe=[ric],
-                        fields=["TR.PriceClose"],
-                        parameters={"Adjusted": 1},
-                        start=start,
-                        end=end,
-                        interval="1D",
-                    )
-                    if raw is not None and not raw.empty:
-                        s = raw.copy()
-                        s.index = pd.to_datetime(s.index)
-                        s = s.apply(pd.to_numeric, errors="coerce").dropna(how="all")
-                        cols[ticker] = s.iloc[:, 0].rename(ticker)
-                except Exception as e:
-                    st.warning(f"{ticker} fetch failed: {e}")
-            try:
-                ld.close_session()
-            except Exception:
-                pass
-        except Exception as e:
-            st.error(f"LSEG session error: {e}")
-            return pd.DataFrame()
-
+            st.warning(f"{ticker} fetch failed: {e}")
     if not cols:
         return pd.DataFrame()
-
-    df = pd.DataFrame(cols).apply(pd.to_numeric, errors="coerce").dropna()
-    return df
+    return pd.DataFrame(cols).apply(pd.to_numeric, errors="coerce").dropna()
 
 
 def _line(series: pd.Series, title: str, subtitle: str,
@@ -271,63 +228,65 @@ with st.expander("Custom partial correlation explorer", expanded=False):
     )
 
     available = sorted(prices.columns.tolist())
-    ce1, ce2, ce3, ce4 = st.columns([1, 1, 1, 1])
-    with ce1:
-        custom_x = st.selectbox("X", available, index=available.index("SPY") if "SPY" in available else 0)
-    with ce2:
-        custom_y = st.selectbox("Y", available, index=available.index("TLT") if "TLT" in available else 1)
-    with ce3:
-        ctrl_opts = ["(none)"] + available
-        custom_ctrl = st.selectbox("Control", ctrl_opts,
-                                   index=ctrl_opts.index("(none)"))
-    with ce4:
-        custom_window = st.number_input("Window (days)", min_value=10, max_value=252, value=60)
+    if len(available) < 2:
+        st.info("Not enough data loaded to use the custom explorer. Click **Run** first.")
+    else:
+        ce1, ce2, ce3, ce4 = st.columns([1, 1, 1, 1])
+        with ce1:
+            custom_x = st.selectbox("X", available, index=available.index("SPY") if "SPY" in available else 0)
+        with ce2:
+            custom_y = st.selectbox("Y", available, index=available.index("TLT") if "TLT" in available else min(1, len(available) - 1))
+        with ce3:
+            ctrl_opts = ["(none)"] + available
+            custom_ctrl = st.selectbox("Control", ctrl_opts, index=0)
+        with ce4:
+            custom_window = st.number_input("Window (days)", min_value=10, max_value=252, value=60)
 
-    custom_label = st.text_input(
-        "Custom tickers to add (comma-separated LSEG RICs)",
-        placeholder="e.g. XLU.P, GLD.P",
-        help="These will be fetched from LSEG and added to the available list.",
-    )
+        custom_label = st.text_input(
+            "Custom tickers to add (comma-separated LSEG RICs)",
+            placeholder="e.g. XLU.P, GLD.P",
+            help="These will be fetched from LSEG and added to the available list.",
+        )
 
-    if custom_label.strip():
-        extra_rics = [r.strip() for r in custom_label.split(",") if r.strip()]
-        extra_map  = {r.replace(".P", "").replace(".", "_"): r for r in extra_rics}
-        with st.spinner("Fetching extra tickers…"):
-            extra_prices = _load_prices(
-                tuple(extra_map.values()),
-                res["start"], res["end"],
-            )
-            if not extra_prices.empty:
-                prices   = pd.concat([prices, extra_prices], axis=1).dropna()
-                available = sorted(prices.columns.tolist())
-                st.success(f"Added: {', '.join(extra_prices.columns.tolist())}")
+        if custom_label.strip():
+            extra_rics = [r.strip() for r in custom_label.split(",") if r.strip()]
+            extra_map  = {r.replace(".P", "").replace(".", "_"): r for r in extra_rics}
+            with st.spinner("Fetching extra tickers…"):
+                extra_prices = _load_prices(
+                    tuple(extra_map.values()),
+                    res["start"], res["end"],
+                )
+                if not extra_prices.empty:
+                    prices    = pd.concat([prices, extra_prices], axis=1).dropna()
+                    available = sorted(prices.columns.tolist())
+                    st.success(f"Added: {', '.join(extra_prices.columns.tolist())}")
 
-    if st.button("Compute", key="custom_run"):
-        if custom_x not in prices.columns or custom_y not in prices.columns:
-            st.warning("One or both tickers not available in loaded data.")
-        elif custom_x == custom_y:
-            st.warning("X and Y must be different.")
-        else:
-            if custom_ctrl == "(none)":
-                rc_custom = RollingCorr(prices[custom_x], prices[custom_y],
-                                        int(custom_window), window_smooth)
-                s_custom  = rc_custom.run_rho()
-                title_c   = f"{custom_x} ↔ {custom_y}  (rolling)"
-                sub_c     = f"Rolling {custom_window}d correlation"
+        if st.button("Compute", key="custom_run"):
+            if custom_x not in prices.columns or custom_y not in prices.columns:
+                st.warning("One or both tickers not available in loaded data.")
+            elif custom_x == custom_y:
+                st.warning("X and Y must be different.")
             else:
-                if custom_ctrl not in prices.columns:
-                    st.warning(f"Control ticker '{custom_ctrl}' not in data.")
-                    st.stop()
-                pc_custom = PartialCorr(prices[custom_x], prices[custom_y],
-                                        prices[custom_ctrl])
-                s_custom  = pc_custom.rolling(window=int(custom_window))
-                title_c   = f"{custom_x} ↔ {custom_y}  (partial, control: {custom_ctrl})"
-                sub_c     = f"Partial correlation removing {custom_ctrl}'s influence · window={custom_window}d"
+                if custom_ctrl == "(none)":
+                    rc_custom = RollingCorr(prices[custom_x], prices[custom_y],
+                                            int(custom_window), window_smooth)
+                    s_custom  = rc_custom.run_rho()
+                    title_c   = f"{custom_x} ↔ {custom_y}  (rolling)"
+                    sub_c     = f"Rolling {custom_window}d correlation"
+                else:
+                    if custom_ctrl not in prices.columns:
+                        st.warning(f"Control ticker '{custom_ctrl}' not in data.")
+                        st.stop()
+                    pc_custom = PartialCorr(prices[custom_x], prices[custom_y],
+                                            prices[custom_ctrl])
+                    s_custom  = pc_custom.rolling(window=int(custom_window))
+                    title_c   = f"{custom_x} ↔ {custom_y}  (partial, control: {custom_ctrl})"
+                    sub_c     = f"Partial correlation removing {custom_ctrl}'s influence · window={custom_window}d"
 
-            scalar = float(s_custom.dropna().iloc[-1]) if not s_custom.dropna().empty else float("nan")
-            st.metric("Latest correlation", f"{scalar:+.3f}")
-            st.plotly_chart(
-                _line(s_custom, title_c, sub_c, height=340),
-                use_container_width=True,
-            )
+                scalar = float(s_custom.dropna().iloc[-1]) if not s_custom.dropna().empty else float("nan")
+                st.metric("Latest correlation", f"{scalar:+.3f}")
+                st.plotly_chart(
+                    _line(s_custom, title_c, sub_c, height=340),
+                    use_container_width=True,
+                )
 

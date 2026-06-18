@@ -147,45 +147,5 @@ class StressScore:
         return comp, pd.Series(dtype=float)
 
 
-# ── Data loading ──────────────────────────────────────────────────────────────
-
-def load_fred(series_id: str, start: str, end: str) -> pd.Series:
-    """Fetch a FRED series directly via the public CSV endpoint (no API key needed)."""
-    import requests, io
-    url = f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={series_id}"
-    resp = requests.get(url, timeout=30)
-    resp.raise_for_status()
-    df = pd.read_csv(io.StringIO(resp.text))
-    date_col = df.columns[0]
-    val_col  = df.columns[1]
-    df.index = pd.to_datetime(df[date_col])
-    s = df[val_col].replace(".", np.nan).dropna().astype(float).sort_index()
-    return s.loc[start:end]
-
-
-def load_spy_lseg(start: str, end: str) -> tuple[pd.Series, pd.Series]:
-    """Fetch SPY close and volume from LSEG."""
-    import lseg.data as ld
-    ld.open_session()
-    try:
-        close = ld.get_history(
-            universe=["SPY.P"], fields=["TR.PriceClose"],
-            parameters={"Adjusted": 1}, start=start, end=end, interval="1D",
-        )
-        volume = ld.get_history(
-            universe=["SPY.P"], fields=["TR.Volume"],
-            parameters={"Adjusted": 1}, start=start, end=end, interval="1D",
-        )
-    finally:
-        try:
-            ld.close_session()
-        except Exception:
-            pass
-
-    def _s(df):
-        df = df.copy()
-        df.index = pd.to_datetime(df.index)
-        df = df.apply(pd.to_numeric, errors="coerce").dropna(how="all")
-        return df.iloc[:, 0].sort_index()
-
-    return _s(close), _s(volume)
+# Data loading for credit_liquidity is handled via lib.data.get_fred_series()
+# and lib.data.get_market_ohlcv() — no direct external fetches in this module.

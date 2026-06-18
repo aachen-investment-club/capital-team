@@ -173,7 +173,7 @@ def _eod_data_version() -> str:
         return ""
 
 
-@st.cache_data
+@st.cache_data(ttl=3600)
 def get_eod_prices(security_id: str, cache_version: str = "") -> pd.DataFrame:
     """Daily EOD OHLCV for one security, sorted by date ascending.
     Columns: security_id, date, open, high, low, close, adj_close, volume
@@ -194,17 +194,30 @@ def get_eod_prices(security_id: str, cache_version: str = "") -> pd.DataFrame:
 
 @st.cache_data(ttl=3600)
 def get_security_master() -> pd.DataFrame:
-    """Active securities from config/security_master.csv.
+    """Active securities from security_master.csv (S3 when deployed, local otherwise).
     Columns: security_id, ric, ticker, isin, name, currency, asset_type
     Sorted by ticker.
     """
-    csv_path = _CONFIG_DIR / "security_master.csv"
-    if not csv_path.exists():
-        return pd.DataFrame(
-            columns=["security_id", "ric", "ticker", "isin",
-                     "name", "currency", "asset_type"]
-        )
-    df = pd.read_csv(csv_path, dtype=str)
+    import io as _io
+    if _S3_BUCKET:
+        try:
+            import boto3 as _boto3
+            s3c = _boto3.client("s3", region_name=_AWS_REGION)
+            obj = s3c.get_object(Bucket=_S3_BUCKET, Key="config/security_master.csv")
+            raw = _io.BytesIO(obj["Body"].read())
+            df  = pd.read_csv(raw, dtype=str)
+        except Exception as e:
+            print(f"[data] S3 security_master failed ({e}), falling back to local")
+            df = pd.read_csv(_CONFIG_DIR / "security_master.csv", dtype=str)
+    else:
+        csv_path = _CONFIG_DIR / "security_master.csv"
+        if not csv_path.exists():
+            return pd.DataFrame(
+                columns=["security_id", "ric", "ticker", "isin",
+                         "name", "currency", "asset_type"]
+            )
+        df = pd.read_csv(csv_path, dtype=str)
+
     df["active"] = df["active"].str.lower().isin(("true", "1", "yes"))
     df = (
         df[df["active"]]
@@ -273,3 +286,93 @@ def get_trade_log() -> pd.DataFrame:
         "trade_log",
         agg.sort_values("trade_date", ascending=False).reset_index(drop=True),
     )
+
+
+# ── External market data ──────────────────────────────────────────────────────
+
+@st.cache_data(ttl=3600)
+def get_market_prices(ticker: str) -> pd.Series:
+    """Daily close price for an external market ticker (SPY, IWM, TLT, HYG, VIX, etc.).
+    Stored under history/market_data/{ticker}.parquet by the nightly Lambda.
+    Falls back to yfinance if not yet on S3 (e.g. first run before Lambda has executed).
+    Returns a Series indexed by date.
+    """
+    if _S3_BUCKET:
+        path = f"s3://{_S3_BUCKET}/history/market_data/{ticker}.parquet"
+    else:
+        path = str(_ROOT / "data" / "market_data" / f"{ticker}.parquet")
+    try:
+        df = _con().execute(
+            f"SELECT date, close FROM read_parquet('{path}') ORDER BY date"
+        ).df()
+        df["date"] = pd.to_datetime(df["date"])
+        s = df.set_index("date")["close"].dropna()
+        return _log(f"market_prices/{ticker}", s.to_frame()).index.map(lambda _: s).iloc[0] if False else s
+    except Exception:
+        # Fallback to yfinance when S3 data not yet available
+        try:
+            import yfinance as yf
+            yf_ticker = f"^{ticker}" if ticker == "VIX" else ticker
+            raw = yf.download(yf_ticker, period="5y", progress=False, auto_adjust=True)["Close"]
+            if isinstance(raw, pd.DataFrame):
+                raw = raw.iloc[:, 0]
+            raw.index = pd.to_datetime(raw.index)
+            print(f"[data] market_prices/{ticker}: yfinance fallback ({len(raw)} rows)")
+            return raw.dropna().sort_index()
+        except Exception as e:
+            print(f"[data] market_prices/{ticker}: both S3 and yfinance failed — {e}")
+            return pd.Series(dtype=float)
+
+
+@st.cache_data(ttl=3600)
+def get_market_ohlcv(ticker: str) -> pd.DataFrame:
+    """Daily OHLCV for an external market ticker. Returns DataFrame with date index."""
+    if _S3_BUCKET:
+        path = f"s3://{_S3_BUCKET}/history/market_data/{ticker}.parquet"
+    else:
+        path = str(_ROOT / "data" / "market_data" / f"{ticker}.parquet")
+    try:
+        df = _con().execute(
+            f"SELECT * FROM read_parquet('{path}') ORDER BY date"
+        ).df()
+        df["date"] = pd.to_datetime(df["date"])
+        return df.set_index("date")
+    except Exception:
+        return pd.DataFrame(columns=["close", "volume"])
+
+
+@st.cache_data(ttl=3600)
+def get_fred_series(series_id: str) -> pd.Series:
+    """A FRED time series (e.g. BAMLH0A0HYM2 for HY OAS).
+    Stored under history/market_data/FRED_{series_id}.parquet by the nightly Lambda.
+    Falls back to live FRED CSV endpoint if not yet on S3.
+    Returns a Series indexed by date.
+    """
+    if _S3_BUCKET:
+        path = f"s3://{_S3_BUCKET}/history/market_data/FRED_{series_id}.parquet"
+    else:
+        path = str(_ROOT / "data" / "market_data" / f"FRED_{series_id}.parquet")
+    try:
+        df = _con().execute(
+            f"SELECT date, value FROM read_parquet('{path}') ORDER BY date"
+        ).df()
+        df["date"] = pd.to_datetime(df["date"])
+        s = df.set_index("date")["value"].dropna()
+        print(f"[data] fred/{series_id}: {len(s)} rows from S3")
+        return s
+    except Exception:
+        # Fallback to live FRED CSV
+        try:
+            import urllib.request as _url, io as _io, numpy as _np
+            u = f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={series_id}"
+            with _url.urlopen(u, timeout=30) as r:
+                raw = pd.read_csv(_io.BytesIO(r.read()))
+            raw.columns = ["date", "value"]
+            raw["date"]  = pd.to_datetime(raw["date"])
+            raw["value"] = pd.to_numeric(raw["value"].replace(".", _np.nan), errors="coerce")
+            s = raw.dropna().set_index("date")["value"].sort_index()
+            print(f"[data] fred/{series_id}: FRED fallback ({len(s)} rows)")
+            return s
+        except Exception as e:
+            print(f"[data] fred/{series_id}: both S3 and FRED failed — {e}")
+            return pd.Series(dtype=float)

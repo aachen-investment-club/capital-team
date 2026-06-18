@@ -13,11 +13,10 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import pandas as pd
 import numpy as np
-import yfinance as yf
 
 from lib.theme import inject_css, FAVICON
 from lib.structural_break import CUSUMDetector, StudentTBOCPD, build_level_signal
-from lib.credit_liquidity import CreditFilter, LiquidityFilter, StressScore, load_fred
+from lib.credit_liquidity import CreditFilter, LiquidityFilter, StressScore
 from lib.trend import GJRGarch
 
 st.set_page_config(
@@ -94,104 +93,66 @@ def _rgba(hex_color: str, alpha: float) -> str:
 
 @st.cache_data(ttl=3600, show_spinner=False)
 def _load_macro(start: str, end: str, _bust: int = 3) -> dict:
-    """
-    Loads HY OAS (FRED) + SPY close+volume (yfinance) + TLT + VIX.
-    Returns dict with Series: hy_oas, spy_close, spy_vol, tlt_close, vix_close
-    """
+    """Load HY OAS, SPY, TLT, VIX from S3 via lib.data."""
+    from lib.data import get_fred_series, get_market_prices, get_market_ohlcv
     result = {}
-
-    # FRED — HY OAS
     try:
-        result["hy_oas"] = load_fred("BAMLH0A0HYM2", start, end)
+        result["hy_oas"] = get_fred_series("BAMLH0A0HYM2").loc[start:end]
     except Exception as e:
-        st.warning(f"FRED HY OAS failed: {e}")
+        st.warning(f"HY OAS failed: {e}")
         result["hy_oas"] = pd.Series(dtype=float)
-
-    # yfinance — SPY, TLT, VIX
+    for key, ticker in [("spy_close", "SPY"), ("tlt_close", "TLT"), ("vix_close", "VIX")]:
+        try:
+            result[key] = get_market_prices(ticker).loc[start:end]
+        except Exception:
+            result[key] = pd.Series(dtype=float)
     try:
-        raw = yf.download(
-            ["SPY", "TLT", "^VIX"],
-            start=start, end=end,
-            progress=False, auto_adjust=True,
-        )
-        close  = raw["Close"]  if "Close"  in raw.columns else raw
-        volume = raw["Volume"] if "Volume" in raw.columns else pd.DataFrame()
-
-        def _col(df, col):
-            if col in df.columns:
-                s = df[col].copy()
-                if isinstance(s, pd.DataFrame):
-                    s = s.iloc[:, 0]
-                s.index = pd.to_datetime(s.index)
-                return s.dropna().sort_index()
-            return pd.Series(dtype=float)
-
-        result["spy_close"] = _col(close, "SPY")
-        result["tlt_close"] = _col(close, "TLT")
-        result["vix_close"] = _col(close, "^VIX")
-        result["spy_vol"]   = _col(volume, "SPY") if not volume.empty else pd.Series(dtype=float)
-    except Exception as e:
-        st.warning(f"yfinance fetch failed: {e}")
-        for k in ("spy_close", "tlt_close", "vix_close", "spy_vol"):
-            result.setdefault(k, pd.Series(dtype=float))
-
+        spy_ohlcv = get_market_ohlcv("SPY")
+        result["spy_vol"] = spy_ohlcv["volume"].loc[start:end].dropna()
+    except Exception:
+        result["spy_vol"] = pd.Series(dtype=float)
     return result
 
 
 @st.cache_data(ttl=3600, show_spinner=False)
 def _load_benchmark_prices(start: str, end: str) -> pd.DataFrame:
-    raw = yf.download(
-        list(BENCHMARKS.keys()),
-        start=start, end=end,
-        progress=False, auto_adjust=True,
-    )["Close"]
-    if isinstance(raw, pd.Series):
-        raw = raw.to_frame()
-    raw.index = pd.to_datetime(raw.index)
-    return raw.apply(pd.to_numeric, errors="coerce").dropna(how="all")
+    from lib.data import get_market_prices
+    cols = {}
+    for ticker in BENCHMARKS.keys():
+        s = get_market_prices(ticker).loc[start:end]
+        if not s.empty:
+            cols[ticker] = s
+    if not cols:
+        return pd.DataFrame()
+    df = pd.DataFrame(cols)
+    df.index = pd.to_datetime(df.index)
+    return df.apply(pd.to_numeric, errors="coerce").dropna(how="all")
 
 
 @st.cache_data(ttl=3600, show_spinner=False)
 def _load_portfolio_positions(start: str, end: str) -> dict[str, pd.Series]:
-    import lseg.data as ld
-    from lib.data import get_security_master, get_daily_weightings_history
-
+    """Load prices for active holdings from S3 EOD data via lib.data."""
+    from lib.data import get_security_master, get_daily_weightings_history, get_eod_prices, _eod_data_version
     sm = get_security_master()
     wh = get_daily_weightings_history()
     if not wh.empty:
         latest = wh["date"].max()
         syms   = set(wh[wh["date"] == latest]["symbol"].tolist())
-        sm     = sm[sm["ticker"].isin(syms) | sm["ric"].isin(syms)]
+        sm     = sm[sm["ticker"].isin(syms)]
     sm = sm[sm["asset_type"] != "INDEX"]
     if sm.empty:
         return {}
-
-    ric_to_ticker = dict(zip(sm["ric"].astype(str), sm["ticker"].astype(str)))
+    version = _eod_data_version()
     out = {}
-    try:
-        ld.open_session()
-        for ric, ticker in ric_to_ticker.items():
-            try:
-                raw = ld.get_history(
-                    universe=[ric], fields=["TR.PriceClose"],
-                    parameters={"Adjusted": 1},
-                    start=start, end=end, interval="1D",
-                )
-                if raw is None or raw.empty:
-                    continue
-                s = raw.copy()
-                s.index = pd.to_datetime(s.index)
-                s = s.apply(pd.to_numeric, errors="coerce").dropna(how="all")
-                series = s.iloc[:, 0].dropna().sort_index()
-                if len(series) >= 60:
-                    out[ticker] = series.rename(ticker)
-            except Exception:
-                pass
-    finally:
-        try:
-            ld.close_session()
-        except Exception:
-            pass
+    for _, row in sm.iterrows():
+        eod = get_eod_prices(row["security_id"], version)
+        if eod.empty:
+            continue
+        eod["date"] = pd.to_datetime(eod["date"])
+        col = "adj_close" if "adj_close" in eod.columns else "close"
+        s = eod.set_index("date")[col].loc[start:end].dropna().sort_index()
+        if len(s) >= 60:
+            out[row["ticker"]] = s.rename(row["ticker"])
     return out
 
 
@@ -206,34 +167,28 @@ def _load_portfolio_aggregate(start: str, end: str) -> pd.Series:
 
 @st.cache_data(ttl=3600, show_spinner=False)
 def _load_custom_yf(ticker: str, start: str, end: str) -> pd.Series:
-    raw = yf.download(ticker, start=start, end=end, progress=False, auto_adjust=True)["Close"]
-    if isinstance(raw, pd.DataFrame):
-        raw = raw.iloc[:, 0]
-    raw.index = pd.to_datetime(raw.index)
-    return raw.dropna().sort_index().rename(ticker)
+    from lib.data import get_market_prices
+    return get_market_prices(ticker).loc[start:end].rename(ticker)
 
 
 @st.cache_data(ttl=3600, show_spinner=False)
 def _load_custom_lseg(ric: str, start: str, end: str) -> pd.Series:
-    import lseg.data as ld
-    try:
-        ld.open_session()
-        raw = ld.get_history(
-            universe=[ric], fields=["TR.PriceClose"],
-            parameters={"Adjusted": 1},
-            start=start, end=end, interval="1D",
-        )
-        if raw is None or raw.empty:
-            return pd.Series(dtype=float)
-        s = raw.copy()
-        s.index = pd.to_datetime(s.index)
-        s = s.apply(pd.to_numeric, errors="coerce").dropna(how="all")
-        return s.iloc[:, 0].dropna().sort_index().rename(ric)
-    finally:
-        try:
-            ld.close_session()
-        except Exception:
-            pass
+    from lib.data import get_security_master, get_eod_prices, _eod_data_version, get_market_prices
+    sm = get_security_master()
+    match = sm[sm["ric"] == ric]
+    if not match.empty:
+        version = _eod_data_version()
+        eod = get_eod_prices(match.iloc[0]["security_id"], version)
+        if not eod.empty:
+            eod["date"] = pd.to_datetime(eod["date"])
+            col = "adj_close" if "adj_close" in eod.columns else "close"
+            return eod.set_index("date")[col].loc[start:end].dropna().sort_index().rename(ric)
+    ticker = ric.split(".")[0]
+    s = get_market_prices(ticker).loc[start:end]
+    if not s.empty:
+        return s.rename(ric)
+    return pd.Series(dtype=float)
+
 
 
 # ── Signal bus ────────────────────────────────────────────────────────────────

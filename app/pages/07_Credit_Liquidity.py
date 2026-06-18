@@ -35,31 +35,28 @@ run_btn    = _c4.button("Run", type="primary", use_container_width=True)
 
 @st.cache_data(ttl=3600, show_spinner=False)
 def _fetch(start: str, end: str, _bust: int = 2) -> dict:
-    from lib.credit_liquidity import load_fred, load_spy_lseg  # fresh import each call
-    import yfinance as yf
+    from lib.data import get_fred_series, get_market_prices, get_market_ohlcv
     errors = []
 
     hy_oas = pd.Series(dtype=float)
     try:
-        hy_oas = load_fred("BAMLH0A0HYM2", start, end)
+        hy_oas = get_fred_series("BAMLH0A0HYM2").loc[start:end]
     except Exception as e:
-        errors.append(f"FRED HY OAS: {e}")
+        errors.append(f"HY OAS: {e}")
 
     spy_close = spy_volume = pd.Series(dtype=float)
     try:
-        spy_close, spy_volume = load_spy_lseg(start, end)
+        spy_ohlcv  = get_market_ohlcv("SPY")
+        spy_close  = spy_ohlcv["close"].loc[start:end].dropna()
+        spy_volume = spy_ohlcv["volume"].loc[start:end].dropna()
     except Exception as e:
-        errors.append(f"LSEG SPY: {e}")
+        errors.append(f"SPY: {e}")
 
     spx = pd.Series(dtype=float)
     try:
-        raw = yf.download("^GSPC", start=start, end=end, progress=False)["Close"]
-        if isinstance(raw, pd.DataFrame):
-            raw = raw.iloc[:, 0]
-        spx = raw.squeeze().sort_index().astype(float)
-        spx.index = pd.to_datetime(spx.index)
+        spx = get_market_prices("SPY").loc[start:end]   # use SPY as SPX proxy
     except Exception as e:
-        errors.append(f"yfinance SPX: {e}")
+        errors.append(f"SPX: {e}")
 
     return {"hy_oas": hy_oas, "spy_close": spy_close,
             "spy_volume": spy_volume, "spx": spx, "errors": errors}
