@@ -285,3 +285,187 @@ def portfolio_attribution(
         "portfolio_exposure":   portfolio_exposure,
         "total_factor_return":  float(factor_contributions.sum()),
     }
+
+
+# ── Factor return time series ─────────────────────────────────────────────────
+
+def build_average_exposure_matrix(
+    fund_df: pd.DataFrame,
+    eod_cache: dict,
+    dates,
+    non_equity_tickers: "set | None" = None,
+) -> pd.DataFrame:
+    """
+    Average factor exposure matrix across all dates in `dates`.
+
+    Calls build_exposure_matrix for each date and returns the mean Z-score per
+    ticker per style factor.  Tickers that appear on fewer dates (e.g. due to
+    missing price data) are averaged over the dates they do appear.
+
+    Returns a DataFrame with the same column structure as build_exposure_matrix
+    (STYLE_FACTORS only — industry dummies are excluded as they don't average
+    meaningfully).
+    """
+    if non_equity_tickers is None:
+        non_equity_tickers = set()
+
+    fund = fund_df.copy()
+    fund["date"] = pd.to_datetime(fund["date"])
+
+    matrices = []
+    for dt in dates:
+        ts = pd.Timestamp(dt)
+        fund_asof = fund[fund["date"] <= ts]
+        if fund_asof.empty:
+            continue
+        snap_raw = (
+            fund_asof.sort_values("date")
+            .groupby("ric", as_index=False)
+            .last()
+        )
+        equity_records = [
+            {k: (v.item() if hasattr(v, "item") else v) for k, v in row.items()}
+            for row in snap_raw.to_dict("records")
+            if str(row.get("ticker", "")) not in non_equity_tickers
+        ]
+        if len(equity_records) < 3:
+            continue
+        X = build_exposure_matrix(equity_records, eod_cache, dt, fund)
+        if X.empty:
+            continue
+        style_cols = [c for c in STYLE_FACTORS if c in X.columns]
+        matrices.append(X[style_cols])
+
+    if not matrices:
+        return pd.DataFrame()
+
+    combined = pd.concat(matrices)
+    return combined.groupby(combined.index).mean()
+
+
+def build_factor_return_series(
+    fund_df: pd.DataFrame,
+    eod_cache: dict,
+    weights_history: pd.DataFrame,
+    dates,
+    non_equity_tickers: "set | None" = None,
+) -> pd.DataFrame:
+    """
+    Run a daily Barra cross-section for each date in `dates`.
+
+    Uses 1-day security returns for each cross-section so factor contributions
+    are properly period-specific rather than cumulative.  Portfolio weights are
+    sourced from `weights_history` (nearest available date ≤ each day).
+
+    Parameters
+    ----------
+    fund_df           : full fundamentals DataFrame (all dates)
+    eod_cache         : {ric_or_ticker: eod_DataFrame}
+    weights_history   : DataFrame with columns date, symbol, pct_nav
+    dates             : iterable of date-like values (e.g. pd.bdate_range)
+    non_equity_tickers: set of tickers to exclude (ETFs, indices)
+
+    Returns
+    -------
+    DataFrame indexed by date; columns = STYLE_FACTORS.
+    Dates where WLS fails (too few observations) are silently skipped.
+    """
+    if non_equity_tickers is None:
+        non_equity_tickers = set()
+
+    fund = fund_df.copy()
+    fund["date"] = pd.to_datetime(fund["date"])
+
+    wh = weights_history.copy()
+    wh["date"] = pd.to_datetime(wh["date"])
+    wh_dates = sorted(wh["date"].unique())
+
+    rows = []
+    for dt in dates:
+        ts = pd.Timestamp(dt)
+
+        # ── fundamentals snapshot as of dt ────────────────────────────────
+        fund_asof = fund[fund["date"] <= ts]
+        if fund_asof.empty:
+            continue
+        snap_raw = (
+            fund_asof.sort_values("date")
+            .groupby("ric", as_index=False)
+            .last()
+        )
+        equity_records = [
+            {k: (v.item() if hasattr(v, "item") else v) for k, v in row.items()}
+            for row in snap_raw.to_dict("records")
+            if str(row.get("ticker", "")) not in non_equity_tickers
+        ]
+        if len(equity_records) < 3:
+            continue
+
+        X = build_exposure_matrix(equity_records, eod_cache, dt, fund)
+        if X.empty:
+            continue
+
+        # ── 1-day security returns for WLS ────────────────────────────────
+        tr_series:   dict = {}
+        mcap_series: dict = {}
+        for ticker in X.index:
+            ric_matches = [r.get("ric") for r in equity_records if str(r.get("ticker")) == ticker]
+            ric = str(ric_matches[0]) if ric_matches else ticker
+            for key in (ric, ticker):
+                if key in eod_cache:
+                    eod = eod_cache[key]
+                    if isinstance(eod, pd.DataFrame) and not eod.empty:
+                        sub = eod.copy()
+                        sub["date"] = pd.to_datetime(sub["date"])
+                        p_col = "adj_close" if "adj_close" in sub.columns else "close"
+                        sub = sub[sub["date"] <= ts].sort_values("date").tail(2)
+                        if len(sub) == 2:
+                            p_today = float(sub[p_col].iloc[-1])
+                            p_prev  = float(sub[p_col].iloc[-2])
+                            if p_prev > 0:
+                                tr_series[ticker] = p_today / p_prev - 1.0
+                        break
+            mcap_m = [r.get("market_cap") for r in equity_records if str(r.get("ticker")) == ticker]
+            if mcap_m:
+                try:
+                    mcap_series[ticker] = float(mcap_m[0])
+                except (TypeError, ValueError):
+                    pass
+
+        # ── nearest portfolio weights ──────────────────────────────────────
+        available = [d for d in wh_dates if d <= ts]
+        if not available:
+            continue
+        w_day = wh[wh["date"] == max(available)]
+        w_day = w_day[~w_day["symbol"].str.startswith("CASH_")]
+        port_w = w_day.set_index("symbol")["pct_nav"]
+        port_w = port_w[port_w.index.isin(X.index)]
+        if port_w.empty or port_w.sum() <= 0:
+            continue
+        port_w = port_w / port_w.sum()
+
+        # ── WLS + attribution ──────────────────────────────────────────────
+        try:
+            factor_returns, _ = estimate_factor_returns(
+                X, pd.Series(tr_series), pd.Series(mcap_series)
+            )
+            attr = portfolio_attribution(X, factor_returns, port_w)
+            if not attr:
+                continue
+            fc = attr["factor_contributions"]
+            style_fc = {f: float(fc[f]) for f in STYLE_FACTORS if f in fc.index}
+            if style_fc:
+                rows.append({"date": ts, **style_fc})
+        except (ValueError, Exception):
+            continue
+
+    if not rows:
+        return pd.DataFrame(columns=["date"] + STYLE_FACTORS).set_index("date")
+    return pd.DataFrame(rows).set_index("date").sort_index()
+
+
+def aggregate_monthly(daily_df: pd.DataFrame) -> pd.DataFrame:
+    """Compound daily factor contributions into monthly totals."""
+    if daily_df.empty:
+        return daily_df
+    return (1 + daily_df.fillna(0)).resample("ME").prod().sub(1)

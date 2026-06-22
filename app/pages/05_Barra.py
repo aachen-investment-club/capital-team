@@ -1,6 +1,5 @@
 import sys
 import pathlib
-import importlib
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent.parent))
 
@@ -11,7 +10,6 @@ for _mod in list(sys.modules.keys()):
 
 import streamlit as st
 import plotly.graph_objects as go
-import plotly.express as px
 import pandas as pd
 import numpy as np
 from datetime import date
@@ -27,6 +25,7 @@ from lib.fundamentals import get_fundamentals
 from lib.barra import (
     STYLE_FACTORS,
     build_exposure_matrix,
+    build_average_exposure_matrix,
     portfolio_weighted_exposure,
     universe_factor_stats,
     sector_exposures,
@@ -38,17 +37,41 @@ st.set_page_config(page_title="Barra · AIC", page_icon=FAVICON, layout="wide")
 inject_css()
 st.title("Barra Factor Model")
 with st.popover("ℹ"):
-    st.markdown("""Takes a cross section of the market and fits a regression to explain what drove our returns. Factors include sector exposure, momentum, and volatility rather than individual stock moves. Tells you whether losses came from bad factor bets or from idiosyncratic stock risk.""")
+    st.markdown("""Takes a cross section of the market and fits a regression to explain what drove our returns. Factors include sector exposure, momentum, and volatility rather than individual stock moves. Daily shows Z-scores as of the selected date; monthly averages daily Z-scores across every business day in the selected range.""")
 
 _TODAY    = date.today() - pd.Timedelta(days=1)
 _DATE_MIN = date(2024, 1, 1)
+_DEFAULT_START = (pd.Timestamp(_TODAY) - pd.DateOffset(months=3)).date()
 
 
 # ── Controls ──────────────────────────────────────────────────────────────────
 
-_c1, _c2 = st.columns([2, 1])
-as_of_date = _c1.date_input("As-of date", value=_TODAY, min_value=_DATE_MIN, max_value=_TODAY)
-run_btn    = _c2.button("Run Barra", type="primary", use_container_width=True)
+view_mode = st.radio(
+    "View", ["Daily", "Monthly"], horizontal=True, label_visibility="collapsed"
+)
+st.write("")
+
+if view_mode == "Daily":
+    _c1, _c2 = st.columns([3, 1])
+    hist_start = _c1.date_input("Date", value=_TODAY, min_value=_DATE_MIN, max_value=_TODAY)
+    hist_end   = hist_start
+    run_btn    = _c2.button("Run Barra", type="primary", use_container_width=True)
+else:
+    _all_months   = pd.date_range(
+        start=pd.Timestamp(_DATE_MIN).to_period("M").to_timestamp(),
+        end=pd.Timestamp(_TODAY).to_period("M").to_timestamp(),
+        freq="MS",
+    )
+    _month_labels = [m.strftime("%b %Y") for m in _all_months]
+    _default_from = max(0, len(_month_labels) - 3)
+
+    _c1, _c2, _c3 = st.columns([2, 2, 1])
+    _sel_from  = _c1.selectbox("From month", _month_labels, index=_default_from)
+    _sel_to    = _c2.selectbox("To month",   _month_labels, index=len(_month_labels) - 1)
+    run_btn    = _c3.button("Run Barra", type="primary", use_container_width=True)
+
+    hist_start = pd.Timestamp(_sel_from).date()
+    hist_end   = min((pd.Timestamp(_sel_to) + pd.offsets.MonthEnd(0)).date(), _TODAY)
 
 
 # ── Data loading ──────────────────────────────────────────────────────────────
@@ -78,6 +101,14 @@ def _latest_weights() -> pd.Series:
     return latest.set_index("symbol")["pct_nav"] / total
 
 
+@st.cache_data(ttl=3600, show_spinner=False)
+def _build_avg_exposure(start, end, cache_ver, _fund_df, _eod_cache):
+    sm     = get_security_master()
+    non_eq = set(sm[sm["asset_type"].isin(["ETF", "INDEX"])]["ticker"].tolist())
+    dates  = pd.bdate_range(start, end)
+    return build_average_exposure_matrix(_fund_df, _eod_cache, dates, non_eq)
+
+
 version   = _eod_data_version()
 fund_df   = get_fundamentals()
 eod_cache = _load_eod(version)
@@ -95,23 +126,30 @@ if fund_df.empty:
 if "barra_result" not in st.session_state:
     st.session_state["barra_result"] = None
 
+_input_key = (view_mode, hist_start, hist_end)
+if st.session_state.get("_barra_input_key") != _input_key:
+    st.session_state["_barra_input_key"] = _input_key
+    st.session_state["barra_result"] = None
+
 if run_btn:
-    with st.spinner("Building factor model…"):
+    n_days = pd.bdate_range(hist_start, hist_end).size
+    label  = "Building factor model…" if n_days == 1 else f"Averaging {n_days} daily cross-sections…"
+    with st.spinner(label):
         try:
             fund_df["date"] = pd.to_datetime(fund_df["date"])
-            fund_asof = fund_df[fund_df["date"] <= pd.Timestamp(as_of_date)]
+
+            # Cross-section as of end date (always needed for WLS / attribution)
+            as_of_date = hist_end
+            fund_asof  = fund_df[fund_df["date"] <= pd.Timestamp(as_of_date)]
             if fund_asof.empty:
                 st.error(f"No fundamentals data on or before {as_of_date}.")
                 st.stop()
-            # Take the most recent row per RIC — avoids missing stocks that
-            # didn't trade on the single latest date (different market calendars)
+
             snap_raw = (
                 fund_asof.sort_values("date")
                 .groupby("ric", as_index=False)
                 .last()
             )
-
-            # Convert to plain Python list-of-dicts — avoids pandas accessor issues
             snap_records = [
                 {k: (v.item() if hasattr(v, "item") else v) for k, v in row.items()}
                 for row in snap_raw.to_dict("records")
@@ -120,9 +158,6 @@ if run_btn:
             snap_date = fund_asof["date"].max()
             st.caption(f"Snapshot: {snap_date.date()}  ·  {len(snap_records)} securities")
 
-            # Exclude only the tickers we explicitly know are ETFs or indices
-            # (from security_master). Everything else in the fundamentals universe
-            # is assumed to be an equity — barra_universe.csv only contains stocks.
             sm = get_security_master()
             known_non_equity = set(
                 sm[sm["asset_type"].isin(["ETF", "INDEX"])]["ticker"].tolist()
@@ -134,36 +169,45 @@ if run_btn:
             if len(equity_records) < 3:
                 equity_records = snap_records
 
-            # Build exposure matrix — pass full fund_df so market_cap history
-            # can fill in momentum/growth for securities without EOD prices
-            X = build_exposure_matrix(equity_records, eod_cache, as_of_date, fund_df)
-
-            if X.empty:
+            # Single-date exposure matrix (used for WLS / attribution)
+            X_snap = build_exposure_matrix(equity_records, eod_cache, as_of_date, fund_df)
+            if X_snap.empty:
                 st.error("Exposure matrix is empty. Check fundamentals data.")
                 st.stop()
 
-            # Universe-level summaries (always available)
-            uni_stats   = universe_factor_stats(X)
-            sec_exp     = sector_exposures(X)
+            # Display matrix: single date for daily, averaged for monthly
+            if view_mode == "Daily":
+                display_X = X_snap
+            else:
+                display_X = _build_avg_exposure(hist_start, hist_end, version, fund_df, eod_cache)
+                if display_X.empty:
+                    display_X = X_snap
 
-            # Portfolio weighted exposures (always available)
+            # Merge averaged Z-scores into X_snap so industry dummies are present
+            # for sector_exposures grouping (sector assignments come from X_snap,
+            # style factor values come from display_X)
+            X_for_sec = X_snap.copy()
+            for _col in STYLE_FACTORS:
+                if _col in display_X.columns and _col in X_for_sec.columns:
+                    X_for_sec[_col] = display_X[_col].reindex(X_for_sec.index)
+            sec_exp = sector_exposures(X_for_sec)
+
             port_weights = _latest_weights()
             port_exp     = pd.Series(dtype=float)
             if not port_weights.empty:
-                # Only keep equity positions that are in the exposure matrix
-                equity_weights = port_weights[port_weights.index.isin(X.index)]
+                equity_weights = port_weights[port_weights.index.isin(display_X.index)]
                 if not equity_weights.empty:
                     equity_weights = equity_weights / equity_weights.sum()
-                    port_exp = portfolio_weighted_exposure(X, equity_weights)
+                    port_exp = portfolio_weighted_exposure(display_X, equity_weights)
                     st.caption(
                         f"Portfolio: {len(equity_weights)} equity positions matched  "
                         f"({', '.join(equity_weights.index.tolist())})"
                     )
 
-            # Factor return estimation via WLS (optional — needs price history)
+            # WLS attribution on single-date snapshot
             tr_series   = {}
             mcap_series = {}
-            for ticker in X.index:
+            for ticker in X_snap.index:
                 ric_matches = [r.get("ric") for r in equity_records if str(r.get("ticker")) == ticker]
                 ric = str(ric_matches[0]) if ric_matches else ticker
                 for key in (ric, ticker):
@@ -175,12 +219,11 @@ if run_btn:
                             p_col = "adj_close" if "adj_close" in eod.columns else "close"
                             sub = eod[eod["date"] <= pd.Timestamp(as_of_date)].sort_values("date")
                             if len(sub) >= 5:
-                                p_now = float(sub[p_col].iloc[-1])
+                                p_now   = float(sub[p_col].iloc[-1])
                                 p_start = float(sub[p_col].iloc[0])
                                 if p_start > 0:
                                     tr_series[ticker] = p_now / p_start - 1.0
                             break
-
                 mcap_m = [r.get("market_cap") for r in equity_records if str(r.get("ticker")) == ticker]
                 if mcap_m:
                     try:
@@ -193,23 +236,25 @@ if run_btn:
             port_attr      = {}
             try:
                 factor_returns, fit = estimate_factor_returns(
-                    X, pd.Series(tr_series), pd.Series(mcap_series)
+                    X_snap, pd.Series(tr_series), pd.Series(mcap_series)
                 )
                 if not port_weights.empty and factor_returns is not None:
-                    port_attr = portfolio_attribution(X, factor_returns, port_weights)
+                    port_attr = portfolio_attribution(X_snap, factor_returns, port_weights)
             except ValueError:
-                pass  # Factor returns optional — exposures still shown
+                pass
 
             st.session_state["barra_result"] = {
-                "X":              X,
-                "uni_stats":      uni_stats,
-                "sec_exp":        sec_exp,
-                "port_exp":       port_exp,
-                "port_attr":      port_attr,
+                "display_X":     display_X,
+                "sec_exp":       sec_exp,
+                "port_exp":      port_exp,
+                "port_attr":     port_attr,
                 "factor_returns": factor_returns,
-                "fit":            fit,
-                "as_of":          as_of_date,
-                "n":              len(X),
+                "fit":           fit,
+                "as_of":         as_of_date,
+                "hist_start":    hist_start,
+                "hist_end":      hist_end,
+                "view_mode":     view_mode,
+                "n":             len(display_X),
             }
         except Exception:
             import traceback
@@ -218,7 +263,7 @@ if run_btn:
 
 res = st.session_state["barra_result"]
 if res is None:
-    st.info("Select a date and click **Run Barra**.")
+    st.info("Select a date or month range and click **Run Barra**.")
     st.stop()
 
 
@@ -228,6 +273,7 @@ _GREEN = "#10B981"
 _RED   = "#EF4444"
 _BLUE  = "#3B82F6"
 _GREY  = "#64748B"
+
 
 def _hbar(series: pd.Series, title: str, subtitle: str = "", height: int = 420):
     """Horizontal diverging bar — sorted by value, colour-coded pos/neg."""
@@ -263,44 +309,6 @@ def _hbar(series: pd.Series, title: str, subtitle: str = "", height: int = 420):
     return fig
 
 
-def _grouped_bar(df: pd.DataFrame, title: str, subtitle: str = "", height: int = 420):
-    """Grouped vertical bar for portfolio vs universe comparison."""
-    fig = go.Figure()
-    fig.add_trace(go.Bar(
-        name="Portfolio",
-        x=df.index.tolist(), y=df["Portfolio"].tolist(),
-        marker_color=_BLUE, marker_line_width=0,
-        text=[f"{v:+.2f}" for v in df["Portfolio"]],
-        textposition="outside", textfont=dict(size=12),
-        hovertemplate="%{x} — Portfolio: %{y:+.3f}<extra></extra>",
-    ))
-    fig.add_trace(go.Bar(
-        name="Universe avg",
-        x=df.index.tolist(), y=df["Universe"].tolist(),
-        marker_color=_GREY, marker_line_width=0,
-        text=[f"{v:+.2f}" for v in df["Universe"]],
-        textposition="outside", textfont=dict(size=12),
-        hovertemplate="%{x} — Universe: %{y:+.3f}<extra></extra>",
-    ))
-    fig.add_hline(y=0, line_width=1, line_color="rgba(255,255,255,0.25)")
-    title_text = f"<b>{title}</b>"
-    if subtitle:
-        title_text += f"<br><span style='font-size:12px;color:#94A3B8'>{subtitle}</span>"
-    fig.update_layout(
-        template="capital",
-        title=dict(text=title_text, x=0, xanchor="left", pad=dict(l=0, b=8)),
-        barmode="group",
-        height=height,
-        xaxis=dict(tickfont=dict(size=14), tickangle=0),
-        yaxis=dict(title="Weighted Z-score", tickfont=dict(size=12), zeroline=False),
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
-                    font=dict(size=13)),
-        margin=dict(l=60, r=40, t=80, b=60),
-        bargap=0.25, bargroupgap=0.08,
-    )
-    return fig
-
-
 def _heatmap(df: pd.DataFrame, title: str, height: int = 500):
     """Factor exposure heatmap — securities on Y axis, factors on X."""
     zmax = max(abs(df.values[np.isfinite(df.values)].max()),
@@ -328,7 +336,7 @@ def _heatmap(df: pd.DataFrame, title: str, height: int = 500):
     return fig
 
 
-def _sector_heatmap(df: pd.DataFrame, height: int = 420):
+def _sector_heatmap(df: pd.DataFrame, subtitle: str = "", height: int = 420):
     """Sector × factor heatmap."""
     zmax = max(abs(df.values[np.isfinite(df.values)].max()),
                abs(df.values[np.isfinite(df.values)].min()), 1.5)
@@ -344,19 +352,32 @@ def _sector_heatmap(df: pd.DataFrame, height: int = 420):
         hovertemplate="Sector: %{y}<br>Factor: %{x}<br>Avg Z-score: %{z:+.3f}<extra></extra>",
         colorbar=dict(title="Avg Z-score", thickness=14, len=0.8),
     ))
+    title_text = "<b>Factor Exposures by Sector</b>"
+    if subtitle:
+        title_text += f"<br><span style='font-size:12px;color:#94A3B8'>{subtitle}</span>"
     fig.update_layout(
         template="capital",
-        title=dict(
-            text="<b>Factor Exposures by Sector</b>"
-                 "<br><span style='font-size:12px;color:#94A3B8'>Average Z-score per GICS sector</span>",
-            x=0, xanchor="left",
-        ),
+        title=dict(text=title_text, x=0, xanchor="left"),
         height=height,
         xaxis=dict(side="top", tickfont=dict(size=13)),
         yaxis=dict(tickfont=dict(size=12), autorange="reversed"),
         margin=dict(l=20, r=80, t=96, b=20),
     )
     return fig
+
+
+# ── Shared display data ───────────────────────────────────────────────────────
+
+display_X = res["display_X"]
+sec_exp   = res["sec_exp"]
+port_exp  = res["port_exp"]
+port_attr = res["port_attr"]
+
+_mode_label = (
+    f"as of {res['as_of']}"
+    if res["view_mode"] == "Daily"
+    else f"avg {res['hist_start'].strftime('%b %Y')} → {res['hist_end'].strftime('%b %Y')}"
+)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -366,17 +387,17 @@ def _sector_heatmap(df: pd.DataFrame, height: int = 420):
 st.subheader("Market Factor Landscape")
 st.write("")
 
-X_all = res["X"]
-sec   = res["sec_exp"]
+if not sec_exp.empty:
+    style_cols = [c for c in STYLE_FACTORS if c in sec_exp.columns]
+    st.plotly_chart(
+        _sector_heatmap(
+            sec_exp[style_cols],
+            subtitle=_mode_label,
+            height=max(380, 52 * len(sec_exp) + 120),
+        ),
+        use_container_width=True,
+    )
 
-
-# Sector heatmap — full width
-if not sec.empty:
-    style_cols = [c for c in STYLE_FACTORS if c in sec.columns]
-    st.plotly_chart(_sector_heatmap(sec[style_cols], height=max(380, 52 * len(sec) + 120)),
-                    use_container_width=True)
-
-# WLS factor returns (only if available)
 if res["factor_returns"] is not None:
     fr = res["factor_returns"]
     r2 = res["fit"].rsquared if res["fit"] is not None else None
@@ -387,78 +408,53 @@ if res["factor_returns"] is not None:
     industry_fr.index = industry_fr.index.str.replace("Industry_", "", regex=False)
     c3, c4 = st.columns(2, gap="large")
     with c3:
-        st.plotly_chart(_hbar(style_fr, "Style Factor Returns",
-                              "Return attributable to each style factor this period", 400),
-                        use_container_width=True)
+        st.plotly_chart(
+            _hbar(style_fr, "Style Factor Returns", f"As of {res['as_of']}", 400),
+            use_container_width=True,
+        )
     with c4:
-        st.plotly_chart(_hbar(industry_fr, "Industry Factor Returns",
-                              "Return attributable to each industry this period", 400),
-                        use_container_width=True)
+        st.plotly_chart(
+            _hbar(industry_fr, "Industry Factor Returns", f"As of {res['as_of']}", 400),
+            use_container_width=True,
+        )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 2. PORTFOLIO FACTOR POSITIONING
+# 2. STYLE FACTOR EXPOSURES
 # ─────────────────────────────────────────────────────────────────────────────
 
 st.divider()
-st.subheader("Portfolio Factor Positioning")
+st.subheader("Style Factor Exposures")
 st.write("")
 
-X        = res["X"]
-port_exp = res["port_exp"]
-port_attr= res["port_attr"]
-
-# Portfolio factor tilts — single series, no universe comparison
 if not port_exp.empty:
     st.plotly_chart(
         _hbar(
             port_exp.dropna(),
             title="Portfolio Factor Tilts",
-            subtitle="Weighted-average style factor exposure across equity positions",
+            subtitle=_mode_label,
             height=400,
         ),
         use_container_width=True,
     )
     st.write("")
 
-# Per-position heatmap — only portfolio equity positions
-style_cols    = [c for c in STYLE_FACTORS if c in X.columns]
+style_cols       = [c for c in STYLE_FACTORS if c in display_X.columns]
 port_weights_all = _latest_weights()
-port_equities = [t for t in port_weights_all.index if t in X.index]
-style_pivot   = X.loc[port_equities, style_cols].dropna(how="all") if port_equities else pd.DataFrame()
+port_equities    = [t for t in port_weights_all.index if t in display_X.index]
+style_pivot      = (
+    display_X.loc[port_equities, style_cols].dropna(how="all")
+    if port_equities else pd.DataFrame()
+)
 
 if not style_pivot.empty:
     st.plotly_chart(
         _heatmap(
             style_pivot,
-            title="Style Factor Exposures — Individual Positions",
+            title=f"Style Factor Exposures — Individual Positions  ·  {_mode_label}",
             height=max(380, 44 * len(style_pivot) + 120),
         ),
         use_container_width=True,
     )
 else:
     st.info("No equity positions found in the exposure matrix.")
-
-# Attribution (only if WLS succeeded)
-if port_attr:
-    st.write("")
-    fc = port_attr["factor_contributions"]
-    style_fc    = fc[[f for f in STYLE_FACTORS if f in fc.index]]
-    industry_fc = fc[[f for f in fc.index if f.startswith("Industry_")]]
-    industry_fc.index = industry_fc.index.str.replace("Industry_", "", regex=False)
-
-    m1, m2 = st.columns(2)
-    m1.metric("Total factor return", f"{port_attr['total_factor_return']:+.2%}")
-    m2.metric("Style contribution",  f"{style_fc.sum():+.2%}")
-    st.write("")
-
-    ca, cb = st.columns(2, gap="large")
-    with ca:
-        st.plotly_chart(_hbar(style_fc, "Style Factor Contributions",
-                              "How much each style factor added/detracted from portfolio return", 400),
-                        use_container_width=True)
-    with cb:
-        if not industry_fc.empty:
-            st.plotly_chart(_hbar(industry_fc, "Industry Contributions",
-                                  "How much each industry factor contributed", 400),
-                            use_container_width=True)
