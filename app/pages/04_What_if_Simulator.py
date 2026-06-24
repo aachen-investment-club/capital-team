@@ -92,7 +92,7 @@ with c2:
 with c3:
     rf_pct = st.slider("Risk-Free Rate (% p.a.)", 0.0, 10.0, 3.5, 0.1, key="wi_rf")
 
-if st.button("Simulieren", type="primary"):
+if st.button("Simulate", type="primary"):
     if ticker_input.strip():
         st.session_state["wi_committed"] = {
             "ticker":        ticker_input.strip().upper(),
@@ -100,11 +100,11 @@ if st.button("Simulieren", type="primary"):
             "rf_pct":        rf_pct,
         }
     else:
-        st.warning("Bitte zuerst einen Ticker eingeben.")
+        st.warning("Please type in ticker first.")
 
 committed = st.session_state.get("wi_committed")
 if not committed:
-    st.info("Ticker eingeben und auf **Simulieren** klicken.")
+    st.info("Type in ticker and click **Simulate**.")
     st.stop()
 
 ticker     = committed["ticker"]
