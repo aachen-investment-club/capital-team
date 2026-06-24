@@ -78,6 +78,13 @@ def _benchmark_daily_returns(ticker: str, start: date, end: date) -> pd.Series:
 
 
 def _compute_kpis(r: pd.Series, bm_r: pd.Series, rf: float) -> dict:
+    """Compute KPIs including risk
+
+    Precedent step before _compute_portfolio_kpis(), _compute_stock_kpis()
+
+    Returns dict:
+        vol, ann_ret, sharpe, sortino, max_dd, calmar, beta, alpha, r, dd, cum, len(r)
+    """
     aligned = pd.DataFrame({"r": r, "bm": bm_r}).dropna()
     if len(aligned) < 5:
         return {}
@@ -118,6 +125,10 @@ def _compute_kpis(r: pd.Series, bm_r: pd.Series, rf: float) -> dict:
 
 @st.cache_data
 def _compute_portfolio_kpis(start: date, end: date, bm: str, rf: float) -> dict:
+    """Runs _compute_kpis() with portfolio return series and benchmark return series
+
+    Returns dict, output from _compute_kpis()
+    """
     r    = _portfolio_daily_returns(start, end)
     bm_r = _benchmark_daily_returns(bm, start, end)
     return _compute_kpis(r, bm_r, rf)
@@ -125,6 +136,10 @@ def _compute_portfolio_kpis(start: date, end: date, bm: str, rf: float) -> dict:
 
 @st.cache_data
 def _compute_stock_kpis(symbol: str, start: date, end: date, bm: str, rf: float) -> dict:
+    """Runs _compute_kpis() with stock return series and benchmark return series
+
+    Returns dict, output from _compute_kpis()
+    """
     r    = _stock_daily_returns(symbol, start, end)
     bm_r = _benchmark_daily_returns(bm, start, end)
     return _compute_kpis(r, bm_r, rf)
@@ -147,6 +162,8 @@ def _fmt_x(v: float, decimals: int = 2) -> str:
 
 
 def _render_kpis(kpis: dict, label: str, rf_pct: float, bm_label: str) -> None:
+    """Renders KPIs as Streamlit cards on the page
+    """
     st.caption(
         f"{kpis['n']} trading days · "
         f"{risk_start.strftime('%d %b %Y')} → {risk_end.strftime('%d %b %Y')} · "

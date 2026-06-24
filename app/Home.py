@@ -22,7 +22,6 @@ st.markdown("""
 | Page | What it shows |
 |---|---|
 | **Performance** | Portfolio vs benchmarks · single-position returns · daily weightings by basket · trade log |
-
 | **Risk KPIs** | Portfolio risk · drawdown · rolling volatility · rolling Sharpe |
 | **What-if Simulator** | Portfolio + 1 new asset in question · KPI comparison · graph comparison |
 """)
