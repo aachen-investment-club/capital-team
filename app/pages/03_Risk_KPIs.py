@@ -17,7 +17,7 @@ inject_css()
 st.title("Risk KPIs")
 
 _TODAY    = date.today() - pd.Timedelta(days=1)
-_DATE_MIN = date(2026, 5, 6)
+_DATE_MIN = date(2026, 5, 6) # Start of trade log
 
 BENCHMARKS = {
     "S&P 500":        "SPX",

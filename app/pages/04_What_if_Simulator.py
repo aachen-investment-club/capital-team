@@ -50,10 +50,18 @@ def _compute_kpis(r: pd.Series, rf_daily: float, bm_r: pd.Series) -> dict:
     )
 
     return {
-        "vol": vol, "ann_ret": ann_ret, "sharpe": sharpe,
-        "sortino": sortino, "max_dd": max_dd, "calmar": calmar,
-        "beta": beta, "alpha": alpha,
-        "r": r, "dd": dd, "cum": cum, "n": len(r),
+        "vol": vol,
+        "ann_ret": ann_ret,
+        "sharpe": sharpe,
+        "sortino": sortino,
+        "max_dd": max_dd,
+        "calmar": calmar,
+        "beta": beta,
+        "alpha": alpha,
+        "r": r,
+        "dd": dd,
+        "cum": cum,
+        "n": len(r),
     }
 
 
@@ -86,7 +94,7 @@ with c3:
 
 ticker     = ticker_input.strip().upper()
 new_weight = new_weight_pct / 100.0
-rf_daily   = rf_pct / 100.0 / 252.0
+rf_daily   = rf_pct / 100.0 / 252.0 # linearized
 
 if not ticker:
     st.info("Enter a ticker above to start the simulation.")
