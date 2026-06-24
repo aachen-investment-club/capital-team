@@ -88,17 +88,30 @@ c1, c2, c3 = st.columns([2, 1, 1])
 with c1:
     ticker_input = st.text_input("Ticker (yfinance)", placeholder="e.g. NVDA, BTC-USD, GLD", key="wi_ticker")
 with c2:
-    new_weight_pct = st.slider("New position weight (% of portfolio)", 1, 50, 10, 1, key="wi_weight")
+    new_weight_pct = st.number_input("New position weight (% of portfolio)", min_value=0.01, max_value=100.0, value=10.0, step=0.01, format="%.2f", key="wi_weight")
 with c3:
-    rf_pct  = st.slider("Risk-Free Rate (% p.a.)", 0.0, 10.0, 3.5, 0.1, key="wi_rf")
+    rf_pct = st.slider("Risk-Free Rate (% p.a.)", 0.0, 10.0, 3.5, 0.1, key="wi_rf")
 
-ticker     = ticker_input.strip().upper()
+if st.button("Simulieren", type="primary"):
+    if ticker_input.strip():
+        st.session_state["wi_committed"] = {
+            "ticker":        ticker_input.strip().upper(),
+            "new_weight_pct": new_weight_pct,
+            "rf_pct":        rf_pct,
+        }
+    else:
+        st.warning("Bitte zuerst einen Ticker eingeben.")
+
+committed = st.session_state.get("wi_committed")
+if not committed:
+    st.info("Ticker eingeben und auf **Simulieren** klicken.")
+    st.stop()
+
+ticker     = committed["ticker"]
+new_weight_pct = committed["new_weight_pct"]
+rf_pct     = committed["rf_pct"]
 new_weight = new_weight_pct / 100.0
 rf_daily   = rf_pct / 100.0 / 252.0 # linearized
-
-if not ticker:
-    st.info("Enter a ticker above to start the simulation.")
-    st.stop()
 
 
 # ── Load data ──────────────────────────────────────────────────────────────────
