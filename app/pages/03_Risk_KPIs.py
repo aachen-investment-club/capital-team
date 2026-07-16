@@ -26,7 +26,7 @@ BENCHMARKS = {
     "60/40 Balanced": "60_40",
 }
 
-# ── Controls ───────────────────────────────────────────────────────────────────
+# ── Controls ─────────────────────────────────────────────────────────────────
 c1, c2, c3, c4 = st.columns([1, 1, 1, 1])
 with c1:
     risk_start = st.date_input(
@@ -48,7 +48,7 @@ if risk_start >= risk_end:
     st.stop()
 
 
-# ── Data helpers ───────────────────────────────────────────────────────────────
+# ── Data helpers ─────────────────────────────────────────────────────────────
 
 @st.cache_data
 def _portfolio_daily_returns(start: date, end: date) -> pd.Series:
@@ -152,7 +152,7 @@ def _equity_symbols() -> list[tuple[str, str]]:
     return sorted(stocks.itertuples(index=False, name=None), key=lambda x: x[0])
 
 
-# ── Shared rendering helpers ───────────────────────────────────────────────────
+# ── Shared rendering helpers ─────────────────────────────────────────────────
 
 def _fmt_pct(v: float) -> str:
     return f"{v:.1%}" if not np.isnan(v) else "–"

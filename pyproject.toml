@@ -17,6 +17,7 @@ dependencies = [
     "botocore[crt]>=1.43.18",
     "matplotlib>=3.10.9",
     "lseg-data>=2.0.0",
+    "pyportfolioopt>=1.6.0",
 ]
 
 [tool.setuptools]

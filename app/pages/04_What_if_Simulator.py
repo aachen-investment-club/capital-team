@@ -107,11 +107,11 @@ if not committed:
     st.info("Type in ticker and click **Simulate**.")
     st.stop()
 
-ticker     = committed["ticker"]
+ticker         = committed["ticker"]
 new_weight_pct = committed["new_weight_pct"]
-rf_pct     = committed["rf_pct"]
-new_weight = new_weight_pct / 100.0
-rf_daily   = rf_pct / 100.0 / 252.0 # linearized
+rf_pct         = committed["rf_pct"]
+new_weight     = new_weight_pct / 100.0
+rf_daily       = rf_pct / 100.0 / 252.0 # linearized
 
 
 # ── Load data ──────────────────────────────────────────────────────────────────
@@ -156,8 +156,9 @@ bm_r_aligned     = aligned["bm"]
 whatif_r = (1 - new_weight) * port_r_aligned + new_weight * ticker_r_aligned
 
 
-# ── Compute KPIs ───────────────────────────────────────────────────────────────
-
+# ─────────────────────────────────────────────────────────────────────────────
+# Compute KPIs
+# ─────────────────────────────────────────────────────────────────────────────
 kpis_before = _compute_kpis(port_r_aligned,   rf_daily, bm_r_aligned)
 kpis_after  = _compute_kpis(whatif_r,          rf_daily, bm_r_aligned)
 
@@ -169,8 +170,9 @@ st.caption(
 )
 
 
-# ── KPI comparison table ───────────────────────────────────────────────────────
-
+# ─────────────────────────────────────────────────────────────────────────────
+# KPI comparison table
+# ─────────────────────────────────────────────────────────────────────────────
 st.subheader("KPI Comparison")
 
 metrics = [
@@ -203,7 +205,9 @@ for label, key, fmt, higher_is_better in metrics:
 st.divider()
 
 
-# ── Charts ─────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
+# Charts
+# ─────────────────────────────────────────────────────────────────────────────
 
 tab_dd, tab_cum, tab_ticker, tab_weights = st.tabs(["Drawdown", "Cumulative Return", f"{ticker} Price", "Weight Change"])
 
