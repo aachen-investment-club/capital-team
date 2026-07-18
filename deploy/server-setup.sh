@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
-# Run once on a fresh Ubuntu 22.04+ EC2 instance (t3.small or larger, x86).
-# Attach an IAM instance profile with: S3 read on the data bucket, S3 write on
-# the backup/ prefix, DynamoDB read on fund-baskets — then no AWS keys needed.
+# Run once on a fresh Lightsail Ubuntu 22.04+ instance (2GB/2vCPU bundle or larger).
+# Lightsail has no IAM-instance-profile support, so this box authenticates to AWS
+# with a static key pair — use a purpose-scoped IAM user (S3 read on config/ and
+# history/portfolio/*, S3 read/write/delete on backup/* only, DynamoDB read on
+# fund-baskets only), never a broad personal/admin key.
 # Usage: bash server-setup.sh <git-repo-url>
 set -euo pipefail
 
@@ -53,9 +55,10 @@ LSEG_PASSWORD=REPLACE_ME
 FRED_API_KEY=
 # optional: healthchecks.io ping URL for the nightly ingest
 HEALTHCHECK_URL=
-# Only needed WITHOUT an IAM instance profile:
-#AWS_ACCESS_KEY_ID=REPLACE_ME
-#AWS_SECRET_ACCESS_KEY=REPLACE_ME
+# Static key for the scoped "capital-dashboard" IAM user (Lightsail has no
+# instance-profile mechanism) — never a broad personal/admin key here.
+AWS_ACCESS_KEY_ID=REPLACE_ME
+AWS_SECRET_ACCESS_KEY=REPLACE_ME
 EOF
 chmod 600 "$APP_DIR/.env"
 
