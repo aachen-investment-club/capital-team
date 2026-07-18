@@ -1,0 +1,10 @@
+[Unit]
+Description=Nightly capital data ingestion at 03:15 Berlin time (Tue-Sat, after US close)
+
+[Timer]
+OnCalendar=Tue..Sat 03:15 Europe/Berlin
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

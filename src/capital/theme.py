@@ -1,11 +1,7 @@
-import pathlib
-
+"""Brand theme: palette, the "capital" Plotly template (registered at import),
+and the Mantine theme for the Dash app."""
 import plotly.graph_objects as go
 import plotly.io as pio
-import streamlit as st
-
-_LOGO = str(pathlib.Path(__file__).parent.parent / "assets" / "logo-icon.png")
-FAVICON = _LOGO
 
 # ── Brand palette ────────────────────────────────────────────────────────────
 NAVY       = "#0C1E40"   # sidebar, headings
@@ -63,153 +59,32 @@ _TEMPLATE = go.layout.Template(
     )
 )
 
-# ── CSS injection ────────────────────────────────────────────────────────────
-def inject_css() -> None:
-    """Call once per page in set_page_config() scope to apply the brand theme."""
-    pio.templates["capital"] = _TEMPLATE
-    pio.templates.default = "capital"
-    st.logo(_LOGO, size='large')
-    st.markdown(f"""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+# Register the template globally — importing capital.theme is enough for any
+# figure (Dash callbacks, scripts, notebooks) to pick up the brand template.
+pio.templates["capital"] = _TEMPLATE
+pio.templates.default = "capital"
 
-    html, body, [class*="css"] {{
-        font-family: 'Inter', system-ui, sans-serif;
-    }}
+# ── Mantine theme (Dash app) ─────────────────────────────────────────────────
+# 10-shade scale required by Mantine; index 6 ≈ brand navy (used for filled UI).
+_NAVY_SCALE = [
+    "#EFF6FF", "#DBEAFE", "#BFDBFE", "#93C5FD", "#3A6B9C",
+    "#1E3A5F", "#0C1E40", "#0A1936", "#08142C", "#060F22",
+]
 
-    /* ── Sidebar ─────────────────────────────────────────────────── */
-    [data-testid="stSidebar"] {{
-        background-color: {NAVY};
-        border-right: none;
-    }}
-    [data-testid="stSidebar"] * {{
-        color: #CBD5E1 !important;
-    }}
-    [data-testid="stSidebarNav"] a span {{
-        color: #93C5FD !important;
-    }}
-    [data-testid="stSidebarNav"] a:hover span {{
-        color: {WHITE} !important;
-    }}
-    [data-testid="stSidebarNav"] a[aria-current="page"] span {{
-        color: {WHITE} !important;
-        font-weight: 600;
-    }}
-    [data-testid="stSidebarHeader"] {{
-        border-bottom: 1px solid rgba(255,255,255,0.08);
-        padding-bottom: 0.75rem;
-    }}
+MANTINE_THEME = {
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "primaryColor": "navy",
+    "colors": {"navy": _NAVY_SCALE},
+    "headings": {
+        "fontFamily": "Inter, system-ui, sans-serif",
+        "fontWeight": "600",
+    },
+    "defaultRadius": "md",
+}
 
-    /* ── Top bar ─────────────────────────────────────────────────── */
-    header[data-testid="stHeader"] {{
-        background-color: {WHITE};
-        border-bottom: 1px solid {BORDER};
-    }}
-
-    /* ── Main area ───────────────────────────────────────────────── */
-    .stApp > .main {{
-        background-color: {WHITE};
-    }}
-    .block-container {{
-        padding-top: 2rem;
-        padding-bottom: 3rem;
-    }}
-
-    /* ── Page title ──────────────────────────────────────────────── */
-    h1 {{
-        color: {NAVY};
-        font-weight: 700;
-        letter-spacing: -0.02em;
-    }}
-
-    /* ── Section subheadings ─────────────────────────────────────── */
-    h2, h3 {{
-        color: {NAVY};
-        font-weight: 600;
-        letter-spacing: -0.01em;
-        padding-bottom: 6px;
-        margin-top: 1.5rem;
-    }}
-
-    /* ── Metric cards ────────────────────────────────────────────── */
-    [data-testid="stMetric"] {{
-        background-color: {BLUE_LIGHT};
-        border: 1px solid {BLUE_BORDER};
-        border-radius: 10px;
-        padding: 1rem 1.25rem;
-    }}
-    [data-testid="stMetricLabel"] > div {{
-        color: {TEXT_MUTED} !important;
-        font-size: 0.78rem;
-        font-weight: 500;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-    }}
-    [data-testid="stMetricValue"] > div {{
-        color: {NAVY} !important;
-        font-weight: 700;
-    }}
-    [data-testid="stMetricDelta"] {{
-        font-weight: 500;
-    }}
-
-    /* ── Divider ─────────────────────────────────────────────────── */
-    hr {{
-        border: none;
-        border-top: 1px solid {BORDER};
-        margin: 1.5rem 0;
-    }}
-
-    /* ── Buttons ─────────────────────────────────────────────────── */
-    .stButton > button {{
-        background-color: {GRAY_BG};
-        color: {NAVY};
-        border: 1px solid {BORDER};
-        border-radius: 6px;
-        font-weight: 500;
-        padding: 0.4rem 1.1rem;
-        transition: background-color 0.15s;
-    }}
-    .stButton > button:hover {{
-        background-color: {HOVER};
-        color: {NAVY};
-    }}
-
-    /* ── Ghost action button (wrap element in <div class="action-ghost">) ── */
-    div.action-ghost .stButton > button {{
-        background: transparent;
-        color: {TEXT_MUTED};
-        border: 1px solid {BORDER};
-        border-radius: 6px;
-        font-size: 12px;
-        font-weight: 400;
-        padding: 0.25rem 0.75rem;
-        letter-spacing: 0.02em;
-        transition: color 0.15s, border-color 0.15s;
-    }}
-    div.action-ghost .stButton > button:hover {{
-        background: {HOVER};
-        color: {NAVY};
-        border-color: {BORDER};
-    }}
-
-    /* ── Multiselect pills ───────────────────────────────────────── */
-    .stMultiSelect [data-baseweb="tag"] {{
-        background-color: {BLUE_LIGHT};
-        border: 1px solid {BLUE_BORDER};
-        color: {NAVY};
-    }}
-
-    /* ── Caption / muted text ────────────────────────────────────── */
-    .stCaption, [data-testid="stCaptionContainer"] {{
-        color: {TEXT_MUTED} !important;
-    }}
-
-    /* ── Dataframe ───────────────────────────────────────────────── */
-    [data-testid="stDataFrameResizable"] {{
-        border: 1px solid {BORDER};
-        border-radius: 8px;
-        overflow: hidden;
-    }}
-    </style>
-    """, unsafe_allow_html=True)
+# Plotly PNG-export config shared by every dcc.Graph
+GRAPH_CONFIG = {
+    "displaylogo": False,
+    "modeBarButtonsToRemove": ["lasso2d", "select2d", "autoScale2d"],
+    "toImageButtonOptions": {"format": "png", "scale": 2},
+}

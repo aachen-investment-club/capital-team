@@ -5,8 +5,19 @@ on:
     branches: [main]
 
 jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Import smoke test
+        run: |
+          uv sync --frozen
+          uv run python -c "import capital.dashboard.app; import dash; assert len(dash.page_registry) == 10, sorted(dash.page_registry)"
+
   deploy:
     runs-on: ubuntu-latest
+    needs: smoke
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -17,8 +28,9 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION:    eu-central-1
         run: |
+          # barra_universe.csv is merged into security_master.csv (barra_universe column);
+          # the old S3 copy stays untouched for the fund-eod-ingestion Lambda until decommission.
           aws s3 cp config/security_master.csv s3://aic-fund-public-data/config/security_master.csv
-          aws s3 cp config/barra_universe.csv  s3://aic-fund-public-data/config/barra_universe.csv
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
@@ -29,7 +41,7 @@ jobs:
           script: |
             cd /opt/capital-dashboard
             git pull
-            if git diff HEAD@{1} --name-only | grep -q pyproject.toml; then
-              .venv/bin/pip install -e .
+            if git diff HEAD@{1} --name-only | grep -qE "pyproject.toml|uv.lock"; then
+              ~/.local/bin/uv sync --frozen --extra ingest
             fi
             sudo systemctl restart capital-dashboard

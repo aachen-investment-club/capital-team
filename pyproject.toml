@@ -1,11 +1,18 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "capital-team"
 version = "0.1.0"
-description = "Add your description here"
+description = "AIC portfolio analytics: data pipeline, analytics library, and dashboard"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "streamlit>=1.35.0",
+    "dash[diskcache]>=2.17.0",
+    "dash-mantine-components>=0.14.0",
+    "diskcache>=5.6.0",
+    "gunicorn>=22.0.0",
     "duckdb>=1.0.0",
     "pandas>=2.0.0",
     "plotly>=5.20.0",
@@ -16,11 +23,20 @@ dependencies = [
     "python-dotenv>=1.2.2",
     "botocore[crt]>=1.43.18",
     "matplotlib>=3.10.9",
-    "lseg-data>=2.0.0",
+    "cachelib>=0.13",
     "cvxpy>=1.4.0",
     "arch>=6.3.0",
     "statsmodels>=0.14.0",
 ]
 
-[tool.setuptools]
-packages = []
+[project.scripts]
+capital-ingest = "capital.ingest.cli:main"
+
+[project.optional-dependencies]
+# LSEG SDK is only needed by the ingestion job — keep it out of dashboard installs.
+ingest = [
+    "lseg-data>=2.0.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/capital"]

@@ -1,217 +1,123 @@
 # Capital Team — Portfolio Analytics Dashboard
 
-Read-only Streamlit dashboard for a live-money portfolio: NAV vs benchmarks, position weights, individual position returns, trade log, and EOD price history per security.
+Dash (Plotly) dashboard for the AIC live-money portfolio: NAV vs benchmarks,
+position weights, trade log, factor models (Barra), portfolio optimisation,
+volatility forecasting, correlation/credit/liquidity monitors, and regime
+detection — built on a local DuckDB store of daily OHLCV for the whole universe.
+
+**Live URL:** https://portfolio.aachen-investment-club.de
 
 ## Quick start
 
 ```bash
-uv sync
-uv run streamlit run app/Home.py
+uv sync --extra ingest
+uv run python -m capital.dashboard.app     # http://127.0.0.1:8050
 ```
 
-Open http://localhost:8501. Leave `S3_BUCKET` empty in `.env` to run fully offline against local data.
+Seed the local data store first — copy the nightly DuckDB backup:
 
----
+```bash
+aws s3 cp s3://aic-fund-public-data/backup/market.duckdb data/market.duckdb
+```
+
+(Or, to rebuild from scratch off LSEG: `capital-ingest eod --start <inception>`
+followed by `fund`, `market`, `fred`, `derived`.)
 
 ## Project layout
 
 ```
 capital-team/
-├── app/
-│   ├── Home.py                         # Landing page
-│   └── pages/
-│       ├── 01_Performance.py           # NAV · benchmarks · weights · positions · trade log
-│       └── 02_Equities.py              # Per-security EOD candlestick chart + metrics
-│
-├── lib/
-│   ├── data.py                         # THE DATA CONTRACT — all loaders live here
-│   └── theme.py                        # Plotly "capital" template + brand CSS
-│
-├── lambda/
-│   ├── fund-data-ingestion/            # Nightly: IBKR flex query → nav_history.json + S3
-│   └── fund-eod-ingestion/             # Nightly: LSEG batch EOD fetch → Parquet on S3
-│
-├── scripts/
-│   ├── backfill_positions_to_s3.py     # Parse IBKR XML → build + upload portfolio JSON to S3
-│   ├── ingest_eod.py                   # Backfill + incremental EOD prices via LSEG
-│   └── lookup_rics.py                  # Find valid LSEG RICs from ISINs in security_master.csv
-│
-├── config/
-│   └── security_master.csv             # EOD universe — add rows to extend, no code changes
-│
-├── data/                               # gitignored
-│   └── ibkr/                           # Source XML files (irreplaceable)
-│       ├── prior_positions.xml
-│       ├── trade_log.xml
-│       └── open_positions/YYYYMMDD.xml
-│
-├── pyproject.toml
-└── .env.example
+├── src/capital/
+│   ├── settings.py            # the only reader of env vars
+│   ├── theme.py               # brand palette, plotly "capital" template, Mantine theme
+│   ├── data/                  # THE DATA CONTRACT
+│   │   ├── store.py           #   DuckDB file access (read-only conns / sole-writer ingest)
+│   │   ├── loaders.py         #   get_* loaders, all cached
+│   │   └── cache.py           #   @cached_by_version (invalidated by each ingest)
+│   ├── analytics/             # barra, weighting, volatility, correlation, trend, ...
+│   ├── ingest/                # capital-ingest CLI (see below)
+│   └── dashboard/
+│       ├── app.py             # Dash app factory — gunicorn target: capital.dashboard.app:server
+│       ├── shell.py           # AppShell: header + navbar from the page registry
+│       ├── components.py      # shared page building blocks
+│       ├── pages/             # one file per page; _template.py = copy-paste pattern
+│       └── assets/            # capital.css, logos
+├── config/security_master.csv # the universe (barra_universe column = Barra estimation set)
+├── scripts/                   # lookup_rics.py, IBKR position backfills
+├── deploy/                    # systemd units, nginx conf, server-setup.sh, deploy.sh
+└── lambda/fund-data-ingestion # EXTERNAL project (feeds the club website) — do not touch
 ```
-
----
 
 ## Architecture
 
-The dashboard is read-only and does no computation at request time.
-
 ```
-IBKR Flex Query XML (data/ibkr/)
-        │
-        ▼
-scripts/backfill_positions_to_s3.py          ← run once to rebuild from scratch
-        │  writes to S3: history/portfolio/*.json + derived/*.json
-        ▼
-lambda/fund-data-ingestion  (nightly)
-        │  appends to nav_history.json and other files on S3
-        ▼
-lib/data.py loaders  →  Streamlit pages
+LSEG (EOD + fundamentals)  yfinance (SPY/QQQ/...)  FRED (HY OAS)
+        └──────────────┬──────────────┴──────────────┘
+                       ▼
+        capital-ingest nightly  (systemd timer, 03:15 Berlin, Tue–Sat)
+                       │  upserts + derived tables + data_version bump
+                       ▼
+        data/market.duckdb  ──backup──▶  s3://…/backup/market.duckdb
+                       │
+                       ▼
+        capital.data loaders (version-keyed cache)  ──▶  Dash pages
 
-config/security_master.csv
-        │
-        ├──▶ lambda/fund-eod-ingestion  (nightly, automated)
-        │           │  single LSEG batch call for all securities
-        │           │  appends to history/eod_prices/security_id=.../data.parquet
-        │
-        └──▶ scripts/ingest_eod.py  (manual / backfill)
-                    │  same Parquet layout, per-security incremental
-        ▼
-lib/data.py  get_eod_prices()  →  02_Equities.py
+IBKR Lambda (external)  ──▶  s3://…/history/portfolio/*.json + DynamoDB
+                       └──▶  read-only by the dashboard (NAV, weights, trades)
 ```
 
-**Golden rule:** pages import from `lib/` only — never touch DuckDB, boto3, or file paths directly.
+- The dashboard **never writes** to S3/DynamoDB; the ingest job is the sole
+  writer of the local store and the S3 backup prefix.
+- Heavy interactive math (optimiser, GARCH/BOCPD fits) runs as Dash
+  **background callbacks**; everything input-independent is precomputed nightly.
 
----
-
-## S3 layout
-
-```
-s3://aic-fund-public-data/
-└── history/
-    ├── portfolio/
-    │   ├── nav_history.json
-    │   ├── equity_positions.json
-    │   ├── fx_positions.json
-    │   ├── trade_log.json
-    │   └── derived/
-    │       ├── portfolio_and_benchmarks.json
-    │       └── daily_weightings.json
-    └── raw/
-        └── eod_prices/
-            ├── security_id=SEC_001/data.parquet
-            ├── security_id=SEC_002/data.parquet
-            └── _version.json               ← written after each ingest run
-```
-
----
-
-## Data contract
-
-All data access goes through `lib/data.py`:
-
-| Loader | Source | Returns |
-|---|---|---|
-| `get_portfolio_and_benchmarks()` | `portfolio/derived/portfolio_and_benchmarks.json` | NAV + benchmark index values since inception |
-| `get_daily_weightings_history()` | `portfolio/derived/daily_weightings.json` | Daily weights + returns for all positions |
-| `get_trade_log()` | `portfolio/trade_log.json` | Trade history with same-day fills merged |
-| `get_theme_mappings()` | DynamoDB `fund-baskets` | Basket/theme per symbol (optional) |
-| `get_eod_prices(security_id, cache_version)` | `raw/eod_prices/security_id=.../data.parquet` | Daily OHLCV for one security |
-| `get_security_master()` | `config/security_master.csv` | Active EOD universe |
-
-Add new loaders to `lib/data.py`, never inside a page.
-
----
-
-## Configuration
-
-Copy `.env.example` to `.env`.
-
-| Variable | Default | Purpose |
-|---|---|---|
-| `S3_BUCKET` | _(empty)_ | S3 bucket — empty = use local `./data/` |
-| `AWS_REGION` | `eu-central-1` | AWS region |
-| `DDB_TABLE` | `fund-baskets` | DynamoDB table for theme/basket mappings |
-| `LSEG_APP_KEY` | — | App key for LSEG Data Library (EOD ingestion only) |
-| `LSEG_SESSION_TYPE` | `platform` | `platform` (RDP) or `desktop` (Eikon/Workspace) |
-
----
-
-## Commands
-
-| Command | What it does |
-|---|---|
-| `uv run streamlit run app/Home.py` | Launch dashboard |
-| `S3_BUCKET=aic-fund-public-data uv run python scripts/backfill_positions_to_s3.py` | Rebuild all portfolio JSON from IBKR XML and push to S3 |
-| `uv run python scripts/ingest_eod.py` | Full backfill / incremental EOD price update |
-| `uv run python scripts/ingest_eod.py --dry-run` | Preview what would be fetched |
-| `uv run python scripts/ingest_eod.py --retry-failures` | Retry securities from last failed run |
-| `uv run python scripts/lookup_rics.py` | Find correct LSEG RICs from ISINs in security_master.csv |
-
-
----
-
-## EOD universe
-
-Securities are defined in `config/security_master.csv`. To add a new security:
-
-1. Run `scripts/lookup_rics.py` to find the correct LSEG RIC for the ISIN
-2. Add a row to `config/security_master.csv` — `security_id` must be unique and never reused
-3. Run `scripts/ingest_eod.py` — only the new security is fetched (existing ones are skipped)
-
----
-
-## Rebuild from scratch
-
-If S3 data is lost or you need to rebuild everything from the source XML files:
+## The ingest CLI
 
 ```bash
-# 1. Rebuild portfolio JSON from IBKR XML and push to S3
-S3_BUCKET=aic-fund-public-data uv run python scripts/backfill_positions_to_s3.py
-
-# 2. Re-fetch EOD prices
-uv run python scripts/ingest_eod.py
+uv run capital-ingest nightly              # full pipeline with healthcheck pings
+uv run capital-ingest eod --start 2016-01-01   # backfill new securities
+uv run capital-ingest fund | market | fred | derived | sync
 ```
 
-The three XML files under `data/ibkr/` are the only irreplaceable source data.
-
----
+Idempotent (primary-key upserts) — safe to rerun any night.
 
 ## Adding a page
 
-1. Create `app/pages/NN_name.py`
-2. Import data via `from lib.data import …`
-3. Build charts with `template="capital"` (set globally by `inject_css()`)
-4. Wrap expensive computation in `@st.cache_data`
+1. Copy `src/capital/dashboard/pages/_template.py` to `pages/<name>.py`.
+2. Adjust `dash.register_page(...)` — navbar + home card appear automatically.
+3. Load data only via `capital.data`, math via `capital.analytics`,
+   UI helpers from `capital.dashboard.components`.
+4. Heavy math → `background=True` callback (see `pages/barra.py`).
 
-Streamlit auto-registers the file in the sidebar — no routing or config needed.
+## Adding a security
 
----
+1. `uv run python scripts/lookup_rics.py` to find the LSEG RIC.
+2. Add a row to `config/security_master.csv` (unique `security_id`, never reuse;
+   `barra_universe=true` to include it in the Barra estimation set).
+3. Push to main (CSV syncs to S3), then `capital-ingest eod --start <date>`.
+
+## Configuration (`.env`)
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `S3_BUCKET` | _(empty)_ | bucket for portfolio JSONs + backups (empty = fully local) |
+| `AWS_REGION` | `eu-central-1` | AWS region |
+| `DDB_TABLE` | `fund-baskets` | DynamoDB table for theme mappings |
+| `CAPITAL_DB` | `./data/market.duckdb` | local DuckDB store |
+| `CAPITAL_CACHE` | `./data/cache` | loader + background-callback cache dir |
+| `LSEG_APP_KEY/USERNAME/PASSWORD` | — | LSEG RDP platform session (ingest only) |
+| `FRED_API_KEY` | _(empty)_ | free key; without it FRED history caps at ~3y |
+| `HEALTHCHECK_URL` | _(empty)_ | healthchecks.io ping URL for the nightly job |
 
 ## Production deployment
 
-The dashboard runs on an AWS Lightsail instance ($5/mo, Ubuntu 22.04, eu-central-1) behind nginx with Let's Encrypt TLS.
+Single EC2 instance (t3.small, Ubuntu, eu-central-1) running gunicorn behind
+nginx with Let's Encrypt TLS. `deploy/server-setup.sh` bootstraps a fresh box
+(uv, swapfile, systemd units for dashboard + nightly ingest timer, nginx).
 
-**Live URL:** https://portfolio.aachen-investment-club.de
-
-### Auto-deploy
-
-Every push to `main` triggers the GitHub Actions workflow at `.github/workflows/deploy.yml`, which SSHes into the server and runs `git pull` + `systemctl restart capital-dashboard`.
-
-### Manual deploy
-
-```bash
-# SSH into the server
-ssh -i ~/.ssh/LightsailDefaultKey-eu-central-1.pem ubuntu@<server-ip>
-
-# Pull and restart
-cd /opt/capital-dashboard && bash deploy/deploy.sh
-```
-
-### Infrastructure files
-
-| File | Purpose |
-|---|---|
-| `deploy/server-setup.sh` | One-shot bootstrap for a fresh Lightsail instance |
-| `deploy/deploy.sh` | Pull + restart on the server |
-| `deploy/capital-dashboard.service` | systemd unit file |
-| `deploy/nginx-capital-dashboard.conf` | Nginx reverse proxy config |
+- **Auto-deploy:** push to `main` → GitHub Actions runs an import smoke test,
+  syncs `config/*.csv` to S3, then SSHes in: `git pull`, `uv sync --frozen`,
+  restart.
+- **Manual deploy:** `cd /opt/capital-dashboard && bash deploy/deploy.sh`
+- **Ops:** `journalctl -u capital-ingest` for the nightly job;
+  `sudo systemctl start capital-ingest` to rerun a failed night.
