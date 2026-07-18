@@ -1,15 +1,18 @@
 [Unit]
-Description=Capital Team Streamlit Dashboard
-After=network.target
+Description=Capital Dashboard (Dash via gunicorn)
+Wants=network-online.target
+After=network-online.target
 
 [Service]
 User=ubuntu
 WorkingDirectory=/opt/capital-dashboard
 EnvironmentFile=/opt/capital-dashboard/.env
-ExecStart=/opt/capital-dashboard/.venv/bin/streamlit run app/Home.py \
-  --server.port 8501 \
-  --server.address 127.0.0.1 \
-  --server.headless true
+# 1 worker x 4 threads fits the 2 GB starter instance; scale workers with RAM.
+ExecStart=/opt/capital-dashboard/.venv/bin/gunicorn \
+  --workers 1 --threads 4 \
+  --bind 127.0.0.1:8050 \
+  --timeout 120 \
+  capital.dashboard.app:server
 Restart=always
 RestartSec=5
 

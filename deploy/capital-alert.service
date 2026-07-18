@@ -1,0 +1,9 @@
+[Unit]
+Description=Capital ingest failure alert (healthchecks.io fail ping)
+
+[Service]
+Type=oneshot
+User=ubuntu
+EnvironmentFile=/opt/capital-dashboard/.env
+# Belt-and-braces with the in-CLI ping: fires even if the CLI crashed before pinging.
+ExecStart=/bin/sh -c '[ -n "$HEALTHCHECK_URL" ] && curl -fsS -m 10 "$HEALTHCHECK_URL/fail" || true'

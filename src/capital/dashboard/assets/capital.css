@@ -1,0 +1,49 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background-color: #FFFFFF;
+    color: #0F172A;
+}
+
+h1 {
+    letter-spacing: -0.02em;
+    font-weight: 700;
+}
+
+h2, h3 {
+    letter-spacing: -0.01em;
+    font-weight: 600;
+}
+
+/* Navbar link hover on the navy background */
+.mantine-NavLink-root:hover {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+}
+.mantine-NavLink-root[data-active] {
+    background-color: rgba(255, 255, 255, 0.12) !important;
+}
+.mantine-NavLink-root[data-active] .mantine-NavLink-label {
+    color: #FFFFFF !important;
+    font-weight: 600;
+}
+
+/* Metric cards (dmc.Paper with .metric-card) */
+.metric-card {
+    background-color: #EFF6FF;
+    border: 1px solid #BFDBFE;
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+}
+.metric-card .metric-label {
+    color: #64748B;
+    font-size: 0.78rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+.metric-card .metric-value {
+    color: #0C1E40;
+    font-weight: 700;
+    font-size: 1.4rem;
+}
