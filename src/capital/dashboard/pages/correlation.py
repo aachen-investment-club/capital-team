@@ -183,8 +183,6 @@ def _monitor_block(start, end, window_corr, window_smooth) -> dmc.Stack:
     State("corr-end", "value"),
     State("corr-window", "value"),
     State("corr-smooth", "value"),
-    background=True,
-    running=[(Output("corr-run", "loading"), True, False)],
     prevent_initial_call=True,
 )
 def run_correlation(n_clicks, start, end, window_corr, window_smooth):

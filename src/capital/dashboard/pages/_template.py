@@ -9,8 +9,13 @@ COPY-PASTE PAGE TEMPLATE — the whole teammate-facing pattern.
    (never import boto3/duckdb in a page) and math via capital.analytics.
 4. Callbacks take small inputs (ticker, dates) and return figures — never move
    DataFrames through the browser. Loaders are cached server-side.
-5. Heavy interactive math (optimiser, GARCH fits): add background=True and a
-   running= button state — see pages/barra.py for a worked example.
+5. Heavy interactive math (optimiser, GARCH fits): run it synchronously in the
+   callback (see pages/barra.py). Do NOT use background=True — dash-mantine-
+   components 2.8.0's typed props aren't picklable by dill, so DiskcacheManager
+   crashes on any callback returning a dmc component. Revisit once that's fixed
+   upstream or the page is restructured to keep dmc components out of the
+   pickled payload (e.g. background callback returns raw data to a dcc.Store;
+   a second, non-background callback renders the dmc component from it).
 
 Charts pick up the "capital" template automatically (capital.theme is imported
 by the app). Wrap graphs with components.graph() for the shared PNG export.

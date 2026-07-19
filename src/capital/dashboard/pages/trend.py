@@ -375,8 +375,6 @@ def _stress_for(cfg, start, end):
 @callback(
     Output("trend-bench-results", "children"),
     Input("trend-run-bench", "n_clicks"), *_STATES,
-    background=True,
-    running=[(Output("trend-run-bench", "loading"), True, False)],
     prevent_initial_call=True,
 )
 def run_bench(n, start, end, filters, sma_window, horizon, extras):
@@ -402,8 +400,6 @@ def run_bench(n, start, end, filters, sma_window, horizon, extras):
 @callback(
     Output("trend-pos-results", "children"),
     Input("trend-run-pos", "n_clicks"), *_STATES,
-    background=True,
-    running=[(Output("trend-run-pos", "loading"), True, False)],
     prevent_initial_call=True,
 )
 def run_positions(n, start, end, filters, sma_window, horizon, extras):
@@ -424,8 +420,6 @@ def run_positions(n, start, end, filters, sma_window, horizon, extras):
 @callback(
     Output("trend-agg-results", "children"),
     Input("trend-run-agg", "n_clicks"), *_STATES,
-    background=True,
-    running=[(Output("trend-run-agg", "loading"), True, False)],
     prevent_initial_call=True,
 )
 def run_aggregate(n, start, end, filters, sma_window, horizon, extras):
@@ -447,8 +441,6 @@ def run_aggregate(n, start, end, filters, sma_window, horizon, extras):
     Input("trend-run-custom", "n_clicks"),
     State("trend-custom-ticker", "value"),
     State("trend-custom-label", "value"), *_STATES,
-    background=True,
-    running=[(Output("trend-run-custom", "loading"), True, False)],
     prevent_initial_call=True,
 )
 def run_custom(n, ticker, label, start, end, filters, sma_window, horizon, extras):

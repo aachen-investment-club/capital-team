@@ -365,8 +365,6 @@ def _run_model(view, hist_start, hist_end) -> dmc.Stack:
     State("barra-date", "value"),
     State("barra-from-month", "value"),
     State("barra-to-month", "value"),
-    background=True,
-    running=[(Output("barra-run", "loading"), True, False)],
     prevent_initial_call=True,
 )
 def run_barra(n_clicks, view, day_value, from_month, to_month):
