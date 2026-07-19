@@ -94,7 +94,7 @@ Idempotent (primary-key upserts) — safe to rerun any night.
 1. `uv run python scripts/lookup_rics.py` to find the LSEG RIC.
 2. Add a row to `config/security_master.csv` (unique `security_id`, never reuse;
    `barra_universe=true` to include it in the Barra estimation set).
-3. Push to main (CSV syncs to S3), then `capital-ingest eod --start <date>`.
+3. Push to main (deploys via git pull), then `capital-ingest eod --start <date>`.
 
 ## Configuration (`.env`)
 

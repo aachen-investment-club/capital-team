@@ -46,7 +46,8 @@ or reference S3 paths / the DB file directly:
 - S3/DynamoDB reads (the IBKR Lambda's stable outputs):
   `get_portfolio_and_benchmarks()`, `get_daily_weightings_history()`,
   `get_trade_log()`, `get_theme_mappings()`
-- `get_security_master()` — config/security_master.csv (S3 copy when deployed)
+- `get_security_master()` — config/security_master.csv (git-tracked; read from
+  the local checkout, not S3)
 
 Add new loaders in `capital/data/loaders.py`, decorated with
 `@cached_by_version`, never inside a page.
@@ -97,7 +98,7 @@ deploy/                      # systemd units, nginx conf, server-setup.sh
 
 - **Add a security**: add a row to `config/security_master.csv` (set
   `barra_universe=true` to include it in the Barra estimation set), push to main
-  (CSV syncs to S3), then `capital-ingest eod --start <date>` for history.
+  (deploys via git pull), then `capital-ingest eod --start <date>` for history.
 - **Rerun a failed night**: `sudo systemctl start capital-ingest` (idempotent —
   PK upserts). Check `journalctl -u capital-ingest`.
 - **LSEG session**: one concurrent platform session per credential;
