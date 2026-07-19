@@ -220,8 +220,6 @@ def update_frontier(backtest_from, opt_result):
     State("opt-backtest-from", "value"),
     State("opt-risk-aversion", "value"),
     State("opt-max-beta", "value"),
-    background=True,
-    running=[(Output("opt-run", "loading"), True, False)],
     prevent_initial_call=True,
 )
 def run_optimiser(n_clicks, backtest_from, risk_aversion, max_beta):

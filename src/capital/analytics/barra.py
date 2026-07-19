@@ -166,9 +166,15 @@ def build_exposure_matrix(
             "Liquidity":   liquidity,
         })
 
-    df = pd.DataFrame(rows).set_index("ticker")
+    df = pd.DataFrame(rows)
     if df.empty:
-        return df
+        return df.set_index("ticker") if "ticker" in df.columns else df
+
+    # A ticker can carry >1 RIC in fundamentals history (RIC corrections /
+    # exchange migrations leave stale rows under the retired RIC) — keep the
+    # row with real data per ticker rather than crashing on the duplicate index.
+    df = df.sort_values("market_cap", na_position="first").drop_duplicates(subset="ticker", keep="last")
+    df = df.set_index("ticker")
 
     # Z-score + winsorise each style factor across the universe
     for factor in STYLE_FACTORS:

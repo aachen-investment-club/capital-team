@@ -161,25 +161,25 @@ def get_theme_mappings() -> pd.DataFrame:
 
 @cached_by_version
 def get_security_master() -> pd.DataFrame:
-    """Active securities from security_master.csv (S3 when deployed, local otherwise).
-    Columns: security_id, ric, ticker, isin, name, currency, asset_type
+    """Active securities from config/security_master.csv.
+
+    The CSV ships with the code (git) and is the single source of truth — read
+    from the local checkout, with S3 as a fallback only if the file is somehow
+    absent (mirrors ingest.eod.load_universe). Not synced to S3 by the pipeline.
+    Columns: security_id, ric, ticker, isin, name, currency, asset_type, ...
     Sorted by ticker.
     """
-    if settings.s3_bucket:
-        try:
-            import boto3
-            s3c = boto3.client("s3", region_name=settings.aws_region)
-            obj = s3c.get_object(Bucket=settings.s3_bucket, Key="config/security_master.csv")
-            df = pd.read_csv(io.BytesIO(obj["Body"].read()), dtype=str)
-        except Exception as e:
-            print(f"[data] S3 security_master failed ({e}), falling back to local")
-            df = pd.read_csv(settings.config_dir / "security_master.csv", dtype=str)
-    else:
-        csv_path = settings.config_dir / "security_master.csv"
-        if not csv_path.exists():
-            return pd.DataFrame(columns=["security_id", "ric", "ticker", "isin",
-                                         "name", "currency", "asset_type"])
+    csv_path = settings.config_dir / "security_master.csv"
+    if csv_path.exists():
         df = pd.read_csv(csv_path, dtype=str)
+    elif settings.s3_bucket:
+        import boto3
+        s3c = boto3.client("s3", region_name=settings.aws_region)
+        obj = s3c.get_object(Bucket=settings.s3_bucket, Key="config/security_master.csv")
+        df = pd.read_csv(io.BytesIO(obj["Body"].read()), dtype=str)
+    else:
+        return pd.DataFrame(columns=["security_id", "ric", "ticker", "isin",
+                                     "name", "currency", "asset_type"])
 
     df["active"] = df["active"].str.lower().isin(("true", "1", "yes"))
     df = df[df["active"]].drop(columns=["active"]).sort_values("ticker").reset_index(drop=True)

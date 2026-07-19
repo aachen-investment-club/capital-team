@@ -93,7 +93,7 @@ def layout():
             dmc.MultiSelect(id="vol-models", label="Models", data=list(ALL_MODELS),
                             value=list(ALL_MODELS), w=260),
             dmc.DatePickerInput(id="vol-backtest-from", label="Backtest from",
-                                value=date(2025, 1, 1).isoformat(),
+                                value=_DEFAULT_BACKTEST_FROM.isoformat(),
                                 minDate=_DATE_MIN.isoformat(), maxDate=today.isoformat(), w=170),
             dmc.Box(dmc.Stack([
                 dmc.Text("Forecast horizon (days)", size="sm", fw=500),
@@ -107,6 +107,28 @@ def layout():
                       color="blue", variant="light"),
             id="vol-results", mt="md")),
     ])
+
+
+_DEFAULT_BACKTEST_FROM = date(2025, 1, 1)
+
+
+@callback(
+    Output("vol-backtest-from", "value"),
+    Input("vol-asset", "value"),
+)
+def _sync_backtest_from(asset):
+    """Keep the default backtest date valid for short-history assets (e.g. a
+    live portfolio still in its first few months) instead of defaulting to a
+    date with zero training observations before it."""
+    rets = _get_returns(asset) if asset else None
+    if rets is None or len(rets) < 15:
+        return _DEFAULT_BACKTEST_FROM.isoformat()
+    default_ts = pd.Timestamp(_DEFAULT_BACKTEST_FROM)
+    if (rets.index < default_ts).sum() >= 10 and (rets.index >= default_ts).sum() >= 2:
+        return _DEFAULT_BACKTEST_FROM.isoformat()
+    # Not enough history before the global default — pick the date of the
+    # 15th observation, guaranteeing >= 15 training obs for this asset.
+    return rets.index[15].date().isoformat()
 
 
 def _run_models(asset, models, backtest_from, horizon) -> dmc.Stack:
@@ -232,8 +254,6 @@ def _run_models(asset, models, backtest_from, horizon) -> dmc.Stack:
     State("vol-models", "value"),
     State("vol-backtest-from", "value"),
     State("vol-horizon", "value"),
-    background=True,
-    running=[(Output("vol-run", "loading"), True, False)],
     prevent_initial_call=True,
 )
 def run_volatility(n_clicks, asset, models, backtest_from, horizon):

@@ -245,8 +245,6 @@ def _results_block(start, end, window) -> dmc.Stack:
     State("cl-start", "value"),
     State("cl-end", "value"),
     State("cl-window", "value"),
-    background=True,
-    running=[(Output("cl-run", "loading"), True, False)],
     prevent_initial_call=True,
 )
 def run_credit_liquidity(n_clicks, start, end, window):

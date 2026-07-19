@@ -532,8 +532,6 @@ def _results_block(start, end, sources, custom_ric, k, h, hazard_label, nu) -> d
     State("sb-cusum-h", "value"),
     State("sb-hazard", "value"),
     State("sb-nu", "value"),
-    background=True,
-    running=[(Output("sb-run", "loading"), True, False)],
     prevent_initial_call=True,
 )
 def run_structural_break(n, start, end, sources, custom_ric, k, h, hazard_label, nu):

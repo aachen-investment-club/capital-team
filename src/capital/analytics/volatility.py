@@ -118,7 +118,7 @@ def run_backtest(
     if len(train) < 10:
         raise ValueError(
             f"Only {len(train)} training observations before {backtest_from}. "
-            "Need at least 10 — try an earlier backtest date."
+            "Need at least 10 — try a later backtest date."
         )
     if len(test) < 2:
         raise ValueError("Fewer than 2 test observations. Try an earlier backtest date.")
