@@ -20,7 +20,7 @@ def create_app() -> Dash:
     app = Dash(
         __name__,
         use_pages=True,
-        title="AIC Capital Dashboard",
+        title="Capital Team Dashboard",
         update_title=None,
         background_callback_manager=_background,
         suppress_callback_exceptions=True,

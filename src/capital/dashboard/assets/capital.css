@@ -16,15 +16,15 @@ h2, h3 {
     font-weight: 600;
 }
 
-/* Navbar link hover on the navy background */
+/* Navbar link hover/active on the light steel-blue sidebar (dark overlay, not white) */
 .mantine-NavLink-root:hover {
-    background-color: rgba(255, 255, 255, 0.08) !important;
+    background-color: rgba(12, 30, 64, 0.08) !important;
 }
 .mantine-NavLink-root[data-active] {
-    background-color: rgba(255, 255, 255, 0.12) !important;
+    background-color: rgba(12, 30, 64, 0.14) !important;
 }
 .mantine-NavLink-root[data-active] .mantine-NavLink-label {
-    color: #FFFFFF !important;
+    color: #0C1E40 !important;
     font-weight: 600;
 }
 

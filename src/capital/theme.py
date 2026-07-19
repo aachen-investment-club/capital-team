@@ -4,7 +4,8 @@ import plotly.graph_objects as go
 import plotly.io as pio
 
 # ── Brand palette ────────────────────────────────────────────────────────────
-NAVY       = "#0C1E40"   # sidebar, headings
+NAVY       = "#0C1E40"   # header, headings
+SIDEBAR_BG = "#EFF6FF"   # sidebar — light steel blue-gray; light bg needs dark nav-link text
 HOVER      = "#DDE1E7"   # button / interactive hover fill
 BLUE_MID   = "#60A5FA"   # secondary lines
 BLUE_LIGHT = "#EFF6FF"   # card fills
