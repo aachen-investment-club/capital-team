@@ -81,16 +81,21 @@ def _eod_returns_matrix(symbols: tuple[str, ...], lookback_years: int) -> tuple[
     return returns, sorted(dropped)
 
 
-def _latex_matrix(df, fmt) -> str:
-    """Render a DataFrame's values as a plain bracketed matrix — no embedded row/column labels."""
+def _latex_matrix(df, label: str, fmt) -> str:
+    """
+    Render a DataFrame's values as a plain bracketed matrix, prefixed by its symbol — no embedded row/column labels.
+    """
     body = r" \\ ".join(
         " & ".join(fmt(v) for v in df.loc[idx]) for idx in df.index
     )
-    return r"\left[\begin{array}{" + "r" * len(df.columns) + "}" + body + r"\end{array}\right]"
+    bracketed = r"\left[\begin{array}{" + "r" * len(df.columns) + "}" + body + r"\end{array}\right]"
+    return f"{label} = " + bracketed
 
 
 def _latex_vector(s, label: str, fmt) -> str:
-    """Render a Series' values as a plain bracketed row vector, prefixed by its symbol — no embedded column labels."""
+    """
+    Render a Series' values as a plain bracketed row vector, prefixed by its symbol — no embedded column labels.
+    """
     body = " & ".join(fmt(v) for v in s.values)
     bracketed = r"\left[\begin{array}{" + "r" * len(s) + "}" + body + r"\end{array}\right]"
     return f"{label} = " + bracketed
@@ -102,10 +107,15 @@ def _fmt_pct(v: float, signed: bool = False, decimals: int = 1) -> str:
 
 
 def _fmt_num(v: float, decimals: int = 4) -> str:
-    # Pad non-negative values with a same-width \phantom{-} so the "-" on negative
-    # values elsewhere in the column doesn't shift its digits out of alignment.
+    r"""
+    Pad non-negative values with a same-width \kern (pure spacing, no glyph) so the
+    "-" on negative values elsewhere in the column doesn't shift its digits out of
+    alignment. \kern is used instead of \phantom{-} because a phantom glyph is still
+    present in the DOM (just invisible) and can show up as a stray character when
+    the rendered matrix is text-selected.
+    """
     s = f"{abs(v):.{decimals}f}"
-    return f"-{s}" if v < 0 else rf"\phantom{{-}}{s}"
+    return f"-{s}" if v < 0 else rf"\kern{{0.6em}}{s}"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -142,7 +152,7 @@ with c1:
 with c2:
     tau = st.number_input(
         "Proportionality (𝜏)",
-        min_value=1.0, max_value=10.0, value=1.0,
+        min_value=0.01, max_value=1.0, value=0.05, step=0.01,
         help="𝜏 is the proportionality factor for the covariance matrix "
              "of historic returns to get the prior covariance matrix."
     )
@@ -185,7 +195,7 @@ views_seed = pd.DataFrame(
 ).iloc[0:0]  # empty, correctly typed
 
 views_df = st.data_editor(
-    st.session_state.get("bl_views_df", views_seed),
+    views_seed,
     num_rows="dynamic",
     width="stretch",
     key="bl_views_editor",
@@ -197,7 +207,6 @@ views_df = st.data_editor(
         "Confidence (%)": st.column_config.NumberColumn(min_value=1.0, max_value=100.0, step=5.0, default=50.0),
     },
 )
-st.session_state["bl_views_df"] = views_df
 
 st.markdown("##### Recommended Portfolio")
 
@@ -302,7 +311,7 @@ with st.expander("Show step-by-step calculation", expanded=False):
 
     st.markdown("##### Step 3 — Covariance matrix Σ (Ledoit-Wolf shrinkage, annualised)")
     st.caption("Rows and columns (in order): " + ", ".join(weights.index))
-    st.latex(_latex_matrix(sigma, lambda v: _fmt_num(v, 4)))
+    st.latex(_latex_matrix(sigma, r"\Sigma", lambda v: _fmt_num(v, 4)))
 
     st.markdown("##### Step 4 — Implied equilibrium returns π = 𝛿 · Σ · w")
     st.markdown("Transposed matrix:")
@@ -315,7 +324,7 @@ with st.expander("Show step-by-step calculation", expanded=False):
 # ─────────────────────────────────────────────────────────────────────────────
 st.markdown("##### Conditional Distribution (Views)")
 
-asset_pos = {a: i for i, a in enumerate(sorted(sigma.columns.tolist()))}
+asset_pos = {a: i for i, a in enumerate(weights.index)}
 n_assets = len(asset_pos)
 
 P_rows, Q_vals, conf_vals, view_labels, bad_rows = [], [], [], [], []
@@ -360,7 +369,7 @@ if P_rows:
         sigma, pi=pi, Q=Q, P=P, omega="idzorek", view_confidences=confidences,
         tau=tau, risk_aversion=delta,
     )
-    st.markdown("##### Views entered")
+    st.markdown("###### Views entered")
     st.dataframe(
         pd.DataFrame({"View": view_labels, "Ω (view variance)": np.diag(bl_model.omega)}),
         width="stretch", hide_index=True,
@@ -377,17 +386,42 @@ if P_rows:
             "Columns (left→right): " + ", ".join(sorted_assets)
         )
         P_df = pd.DataFrame(P, index=view_ids, columns=sorted_assets)
-        st.latex(_latex_matrix(P_df, lambda v: _fmt_num(v, 0)))
+        st.latex(_latex_matrix(P_df, "P", lambda v: _fmt_num(v, 0)))
 
         st.markdown("##### Step 2 — View vector Q (annualised view return)")
+        st.markdown("Transposed matrix:")
         st.caption("Entries follow the view order in the table above.")
         Q_series = pd.Series(Q, index=view_ids)
-        st.latex(_latex_vector(Q_series, "Q", lambda v: _fmt_pct(v, signed=True, decimals=2)))
+        st.latex(_latex_vector(Q_series, "Q^T", lambda v: _fmt_pct(v, signed=True, decimals=2)))
 
-        st.markdown("##### Step 3 — Uncertainty matrix Ω (Idzorek, from confidence)")
-        st.caption("Rows and columns follow the view order in the table above.")
+        st.markdown(
+            "##### Step 3 — Uncertainty matrix Ω = diag(𝜏·𝛼ₖ·Pₖ·Σ·Pₖᵀ), 𝛼ₖ = (1−cₖ)/cₖ "
+            "(Idzorek, from confidence)"
+        )
+        st.caption(
+            "Per view: your entered confidence cₖ converts to 𝛼ₖ, which scales Σ's own "
+            "prior variance for that view's portfolio Pₖ into the view's uncertainty Ωₖ. "
+            "100% confidence ⇒ 𝛼ₖ=0 ⇒ Ωₖ=0 (view treated as certain); low confidence ⇒ "
+            "large 𝛼ₖ ⇒ large Ωₖ (view barely moves the posterior). "
+            "Rows follow the view order in the table above."
+        )
+        sigma_arr = np.asarray(sigma)
+        alpha = (1 - confidences) / confidences
+        prior_view_var = np.array([P[k] @ sigma_arr @ P[k] for k in range(len(P))])
+        idzorek_df = pd.DataFrame(
+            {
+                "Confidence cₖ": confidences,
+                "𝛼ₖ = (1−cₖ)/cₖ": alpha,
+                "Pₖ·Σ·Pₖᵀ": prior_view_var,
+                "Ωₖ = 𝜏·𝛼ₖ·Pₖ·Σ·Pₖᵀ": np.diag(bl_model.omega),
+            },
+            index=view_ids,
+        )
+        st.dataframe(idzorek_df.style.format("{:.4f}"), width="stretch")
+
+        st.caption("Rows and columns (in order): " + ", ".join(view_ids))
         omega_df = pd.DataFrame(bl_model.omega, index=view_ids, columns=view_ids)
-        st.latex(_latex_matrix(omega_df, lambda v: _fmt_num(v, 4)))
+        st.latex(_latex_matrix(omega_df, r"\Omega", lambda v: _fmt_num(v, 4)))
 else:
     st.info("No views entered yet — add a row above to tilt the prior. Until then, the posterior equals the prior.")
 
@@ -401,7 +435,7 @@ if bl_model is not None:
     posterior_rets = bl_model.bl_returns()
     posterior_cov = bl_model.bl_cov()
 
-    st.markdown("##### Posterior expected returns — prior π vs posterior")
+    st.markdown("###### Posterior expected returns — prior π vs posterior")
     cmp = pd.DataFrame({"Prior π": pi, "Posterior": posterior_rets})
     st.dataframe(cmp.T.style.format("{:+.2%}"), width="stretch")
 
@@ -416,8 +450,27 @@ if bl_model is not None:
     )
     st.plotly_chart(fig, width="stretch")
 
-    with st.expander("Show posterior covariance matrix Σ_post"):
-        st.dataframe(posterior_cov.style.format("{:.4f}"), width="stretch")
+    with st.expander("Show step-by-step calculation", expanded=False):
+        st.markdown("##### Step 1 — Posterior returns 𝜇 = 𝜋 + 𝜏Σ·Pᵀ·(P𝜏ΣPᵀ+Ω)⁻¹·(Q−P𝜋)")
+        st.caption("Columns (left→right): " + ", ".join(weights.index))
+        st.latex(_latex_vector(posterior_rets, r"\mu", lambda v: _fmt_pct(v, signed=True, decimals=2)))
+
+        st.markdown("##### Step 2 — M = 𝜏Σ − 𝜏ΣPᵀ·(P𝜏ΣPᵀ+Ω)⁻¹·P𝜏Σ (posterior covariance of the mean estimate)")
+        st.caption(
+            "Uncertainty about the *estimate* of returns after updating on your views — "
+            "shrinks toward zero the more (and more confident) views you add.\n\n"
+            "Rows and columns (in order): " + ", ".join(weights.index)
+        )
+        M = posterior_cov - sigma
+        st.latex(_latex_matrix(M, "M", lambda v: _fmt_num(v, 4)))
+
+        st.markdown("##### Step 3 — Posterior covariance Σ_post = Σ + M")
+        st.caption(
+            "Σ (uncertainty in returns themselves) plus M (uncertainty in the mean estimate) — "
+            "always ≥ Σ, since views only ever shrink M, never go negative.\n\n"
+            "Rows and columns (in order): " + ", ".join(weights.index)
+        )
+        st.latex(_latex_matrix(posterior_cov, r"\Sigma_{post}", lambda v: _fmt_num(v, 4)))
 else:
     posterior_rets = pi
     posterior_cov = sigma
