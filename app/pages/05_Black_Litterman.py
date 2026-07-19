@@ -81,28 +81,19 @@ def _eod_returns_matrix(symbols: tuple[str, ...], lookback_years: int) -> tuple[
     return returns, sorted(dropped)
 
 
-def _esc(label: str) -> str:
-    """Make a ticker safe to drop into LaTeX \\text{...}."""
-    return str(label).replace("_", r"\_").replace("%", r"\%")
-
-
 def _latex_matrix(df, fmt) -> str:
-    """Render a labelled DataFrame as a LaTeX array with header row/column."""
-    col_spec = "r|" + "r" * len(df.columns)
-    header = " & " + " & ".join(rf"\text{{{_esc(c)}}}" for c in df.columns) + r" \\ \hline"
-    rows = [
-        rf"\text{{{_esc(idx)}}} & " + " & ".join(fmt(v) for v in df.loc[idx]) + r" \\"
-        for idx in df.index
-    ]
-    return "\\begin{array}{" + col_spec + "}\n" + header + "\n" + "\n".join(rows) + "\n\\end{array}"
+    """Render a DataFrame's values as a plain bracketed matrix — no embedded row/column labels."""
+    body = r" \\ ".join(
+        " & ".join(fmt(v) for v in df.loc[idx]) for idx in df.index
+    )
+    return r"\left[\begin{array}{" + "r" * len(df.columns) + "}" + body + r"\end{array}\right]"
 
 
 def _latex_vector(s, label: str, fmt) -> str:
-    """Render a labelled Series as a single-row LaTeX array with a header row of tickers."""
-    col_spec = "r|" + "r" * len(s)
-    header = " & " + " & ".join(rf"\text{{{_esc(c)}}}" for c in s.index) + r" \\ \hline"
-    row = f"{label} & " + " & ".join(fmt(v) for v in s.values) + r" \\"
-    return "\\begin{array}{" + col_spec + "}\n" + header + "\n" + row + "\n\\end{array}"
+    """Render a Series' values as a plain bracketed row vector, prefixed by its symbol — no embedded column labels."""
+    body = " & ".join(fmt(v) for v in s.values)
+    bracketed = r"\left[\begin{array}{" + "r" * len(s) + "}" + body + r"\end{array}\right]"
+    return f"{label} = " + bracketed
 
 
 def _fmt_pct(v: float, signed: bool = False, decimals: int = 1) -> str:
@@ -111,7 +102,10 @@ def _fmt_pct(v: float, signed: bool = False, decimals: int = 1) -> str:
 
 
 def _fmt_num(v: float, decimals: int = 4) -> str:
-    return f"{v:.{decimals}f}"
+    # Pad non-negative values with a same-width \phantom{-} so the "-" on negative
+    # values elsewhere in the column doesn't shift its digits out of alignment.
+    s = f"{abs(v):.{decimals}f}"
+    return f"-{s}" if v < 0 else rf"\phantom{{-}}{s}"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -123,6 +117,18 @@ st.subheader("Model Inputs")
 
 # ─── Prior ───────────────────────────────────────────────────────────────────
 st.markdown("##### Prior")
+
+with st.expander("Show approach"):
+    st.markdown(
+        "There is no external market-cap benchmark for this set of holdings, so the "
+        "portfolio's own current weights *w* stand in for \"market\" weights — the "
+        "current book is treated as the equilibrium to reverse-optimize from.\n\n"
+        "- **Σ** (covariance): estimated from each security's own EOD price history "
+        "(years, not the portfolio's ~2-month track record), with Ledoit-Wolf shrinkage "
+        "on top of the raw sample covariance for extra stability.\n"
+        "- **π** (prior/implied returns): `π = 𝛿 · Σ · w` — the returns that would "
+        "make the current weights mean-variance optimal, given Σ and risk aversion 𝛿."
+    )
 
 c1, c2, c3 = st.columns([1, 1, 1])
 with c1:
@@ -153,6 +159,21 @@ with c3:
 # ─── Views ───────────────────────────────────────────────────────────────────
 st.markdown("##### Views")
 
+with st.expander("Show approach"):
+    st.markdown(
+        "Each row is one view, expressed either as an **absolute** view "
+        "(\"AAPL will return +8% p.a.\") or a **relative** view "
+        "(\"AAPL will outperform MSFT by +3% p.a.\"). Confidence (0–100%) is converted "
+        "into the view-uncertainty matrix **Ω** via Idzorek's method — low confidence "
+        "pulls the posterior back toward the prior π, high confidence pulls it toward "
+        "the view itself.\n\n"
+        "PyPortfolioOpt computes Ω via the closed-form solution Jay Walters derived "
+        "as equivalent to Idzorek's original (2005) iterative-optimization approach "
+        "(*The Black-Litterman Model in Detail*, 2014), rather than running that "
+        "iterative search directly.\n\n"
+        "No views entered ⇒ the posterior equals the prior."
+    )
+
 # Cheap, cached preview of the investable universe at the current lookback — just to
 # populate the views editor's asset dropdown before Run is clicked.
 _preview_weights = _latest_weights()
@@ -179,6 +200,20 @@ views_df = st.data_editor(
 st.session_state["bl_views_df"] = views_df
 
 st.markdown("##### Recommended Portfolio")
+
+with st.expander("Show approach"):
+    st.markdown(
+        "Standard Markowitz mean-variance optimization (via PyPortfolioOpt's "
+        "`EfficientFrontier`), but fed the Black-Litterman posterior instead of raw "
+        "historical estimates — expected returns and risk reflect the equilibrium prior "
+        "as tilted by your views, not just the sample mean.\n\n"
+        "- **Max Sharpe**: maximises `(E[R] - r_f) / σ`, the risk-adjusted excess return "
+        "over the risk-free rate.\n"
+        "- **Min Volatility**: minimises portfolio σ regardless of expected return.\n\n"
+        "Constrained long-only and fully invested — weights are bounded to [0, 1] and "
+        "sum to 100%, so the optimizer can't short or leave cash on the sidelines."
+    )
+
 c1, c2 = st.columns([1, 1])
 with c1:
     objective = st.selectbox("Objective", ["Max Sharpe", "Min Volatility"])
@@ -219,18 +254,6 @@ st.subheader("Model Output")
 # Prior Distribution
 # ─────────────────────────────────────────────────────────────────────────────
 st.markdown("##### Prior Distribution")
-
-with st.expander("Show approach"):
-    st.markdown(
-        "There is no external market-cap benchmark for this set of holdings, so the "
-        "portfolio's own current weights *w* stand in for \"market\" weights — the "
-        "current book is treated as the equilibrium to reverse-optimize from.\n\n"
-        "- **Σ** (covariance): estimated from each security's own EOD price history "
-        "(years, not the portfolio's ~2-month track record), with Ledoit-Wolf shrinkage "
-        "on top of the raw sample covariance for extra stability.\n"
-        "- **π** (prior/implied returns): `π = 𝛿 · Σ · w` — the returns that would "
-        "make the current weights mean-variance optimal, given Σ and risk aversion 𝛿."
-    )
 
 weights = _latest_weights()
 returns, excluded_symbols = _eod_returns_matrix(tuple(weights.index), lookback_years)
@@ -273,30 +296,24 @@ with st.expander("Show step-by-step calculation", expanded=False):
     st.dataframe(returns.tail(10).style.format("{:+.2%}"), width="stretch")
 
     st.markdown("##### Step 2 — Latest weights *w* (stand-in for market weights)")
-    st.latex(_latex_vector(weights, "w", lambda v: _fmt_pct(v, decimals=1)))
+    st.markdown("Transposed matrix:")
+    st.caption("Columns (left→right): " + ", ".join(weights.index))
+    st.latex(_latex_vector(weights, "w^T", lambda v: _fmt_pct(v, decimals=1)))
 
     st.markdown("##### Step 3 — Covariance matrix Σ (Ledoit-Wolf shrinkage, annualised)")
+    st.caption("Rows and columns (in order): " + ", ".join(weights.index))
     st.latex(_latex_matrix(sigma, lambda v: _fmt_num(v, 4)))
 
     st.markdown("##### Step 4 — Implied equilibrium returns π = 𝛿 · Σ · w")
-    st.latex(_latex_vector(pi, r"\pi", lambda v: _fmt_pct(v, signed=True, decimals=2)))
+    st.markdown("Transposed matrix:")
+    st.caption("Columns (left→right): " + ", ".join(weights.index))
+    st.latex(_latex_vector(pi, r"\pi^T", lambda v: _fmt_pct(v, signed=True, decimals=2)))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Conditional Distribution (Views)
 # ─────────────────────────────────────────────────────────────────────────────
 st.markdown("##### Conditional Distribution (Views)")
-
-with st.expander("Show approach"):
-    st.markdown(
-        "Each row is one view, expressed either as an **absolute** view "
-        "(\"AAPL will return +8% p.a.\") or a **relative** view "
-        "(\"AAPL will outperform MSFT by +3% p.a.\"). Confidence (0–100%) is converted "
-        "into the view-uncertainty matrix **Ω** via Idzorek's method — low confidence "
-        "pulls the posterior back toward the prior π, high confidence pulls it toward "
-        "the view itself.\n\n"
-        "No views entered ⇒ the posterior equals the prior."
-    )
 
 asset_pos = {a: i for i, a in enumerate(sorted(sigma.columns.tolist()))}
 n_assets = len(asset_pos)
@@ -348,6 +365,29 @@ if P_rows:
         pd.DataFrame({"View": view_labels, "Ω (view variance)": np.diag(bl_model.omega)}),
         width="stretch", hide_index=True,
     )
+
+    with st.expander("Show step-by-step calculation", expanded=False):
+        view_ids = [f"View {i + 1}" for i in range(len(view_labels))]
+        sorted_assets = sorted(asset_pos, key=lambda a: asset_pos[a])
+
+        st.markdown("##### Step 1 — Pick matrix P (view × asset)")
+        st.caption(
+            "Each row is one view: +1 on the asset it's about, and for relative views, "
+            "-1 on the comparison asset. Rows follow the view order in the table above.\n\n"
+            "Columns (left→right): " + ", ".join(sorted_assets)
+        )
+        P_df = pd.DataFrame(P, index=view_ids, columns=sorted_assets)
+        st.latex(_latex_matrix(P_df, lambda v: _fmt_num(v, 0)))
+
+        st.markdown("##### Step 2 — View vector Q (annualised view return)")
+        st.caption("Entries follow the view order in the table above.")
+        Q_series = pd.Series(Q, index=view_ids)
+        st.latex(_latex_vector(Q_series, "Q", lambda v: _fmt_pct(v, signed=True, decimals=2)))
+
+        st.markdown("##### Step 3 — Uncertainty matrix Ω (Idzorek, from confidence)")
+        st.caption("Rows and columns follow the view order in the table above.")
+        omega_df = pd.DataFrame(bl_model.omega, index=view_ids, columns=view_ids)
+        st.latex(_latex_matrix(omega_df, lambda v: _fmt_num(v, 4)))
 else:
     st.info("No views entered yet — add a row above to tilt the prior. Until then, the posterior equals the prior.")
 
