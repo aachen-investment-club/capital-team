@@ -25,6 +25,7 @@ def create_app() -> Dash:
         background_callback_manager=_background,
         suppress_callback_exceptions=True,
     )
+    app._favicon = "logo-icon.png"
     app.layout = build_shell()
     return app
 
