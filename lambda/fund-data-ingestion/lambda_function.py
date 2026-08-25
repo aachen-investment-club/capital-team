@@ -130,8 +130,20 @@ def parse_flex(root):
             "commission": float(t.get("ibCommission", 0)),
         })
 
+    new_deposits = []
+    for ct in stmt.findall(".//CashTransaction"):
+        if ct.attrib.get("type") != "Deposits/Withdrawals":
+            continue
+        raw_dt = ct.attrib["dateTime"].split(";")[0]
+        new_deposits.append({
+            "date":        f"{raw_dt[:4]}-{raw_dt[4:6]}-{raw_dt[6:]}",
+            "amount":      float(ct.attrib["amount"]),
+            "currency":    ct.attrib.get("currency", ""),
+            "description": ct.attrib.get("description", ""),
+        })
+
     date_iso = f"{report_date[:4]}-{report_date[4:6]}-{report_date[6:]}"
-    return date_iso, total_nav, positions, fx_positions, new_trades
+    return date_iso, total_nav, positions, fx_positions, new_trades, new_deposits
 
 
 # ── Yahoo Finance prices ─────────────────────────────────────────────────────
@@ -186,6 +198,21 @@ def load_deposit_log() -> list:
         if e.response["Error"]["Code"] in ("NoSuchKey", "404"):
             return []
         raise
+
+
+def save_deposit_log(records: list) -> None:
+    s3.put_object(Bucket=S3_BUCKET, Key=DEPOSIT_LOG_KEY,
+                  Body=json.dumps(records),
+                  ContentType="application/json")
+
+
+def append_deposits(existing: list, new_deposits: list) -> list:
+    """Merge freshly parsed CashTransactions into the log (idempotent)."""
+    seen = {(d["date"], round(d["amount"], 6)) for d in existing}
+    to_add = [d for d in new_deposits if (d["date"], round(d["amount"], 6)) not in seen]
+    if not to_add:
+        return existing
+    return sorted(existing + to_add, key=lambda d: d["date"])
 
 
 def recompute_history(history: list, deposit_log: list) -> list:
@@ -564,12 +591,13 @@ def lambda_handler(event, context):
     # ── 1. Fetch & parse Flex Query ───────────────────────────────
     print("\n[1/7] Fetching IBKR Flex Query…")
     flex_root = fetch_flex_query()
-    report_date, total_nav, positions, fx, new_trades = parse_flex(flex_root)
+    report_date, total_nav, positions, fx, new_trades, new_deposits = parse_flex(flex_root)
     print(f"  report_date : {report_date}")
     print(f"  total_nav   : {total_nav:.2f} EUR")
     print(f"  positions   : {len(positions)} equity  ({[p['symbol'] for p in positions]})")
     print(f"  fx_positions: {len(fx)} FX  ({[p['fxCurrency'] for p in fx]})")
     print(f"  new_trades  : {len(new_trades)} trade(s) in query")
+    print(f"  new_deposits: {len(new_deposits)} cash transaction(s) in query ({new_deposits})")
 
     # ── 2. Market prices ─────────────────────────────────────────
     print("\n[2/7] Fetching market prices…")
@@ -579,8 +607,13 @@ def lambda_handler(event, context):
 
     # ── 3. NAV history ────────────────────────────────────────────
     print("\n[3/7] Loading & updating NAV history…")
-    deposit_log = load_deposit_log()
-    print(f"  deposit_log : {len(deposit_log)} entries")
+    prior_deposit_log = load_deposit_log()
+    deposit_log = append_deposits(prior_deposit_log, new_deposits)
+    if len(deposit_log) != len(prior_deposit_log):
+        save_deposit_log(deposit_log)
+        print(f"  deposit_log : {len(deposit_log) - len(prior_deposit_log)} new cash transaction(s) recorded, {len(deposit_log)} total")
+    else:
+        print(f"  deposit_log : {len(deposit_log)} entries (no new cash transactions)")
     raw_history = load_history()
     print(f"  nav_history : {len(raw_history)} existing entries")
     history = recompute_history(raw_history, deposit_log)
