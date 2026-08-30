@@ -46,6 +46,12 @@ class Settings:
     lseg_username: str = os.getenv("LSEG_USERNAME", "")
     lseg_password: str = os.getenv("LSEG_PASSWORD", "")
     eod_lookback_days: int = int(os.getenv("LOOKBACK_DAYS", "5"))
+    # Backfill pacing. A full-history run over a 1k+ universe is thousands of
+    # consecutive LSEG calls on one credential, so requests are spaced and
+    # failures back off exponentially before the batch is split and retried.
+    lseg_min_request_interval: float = float(os.getenv("LSEG_MIN_REQUEST_INTERVAL", "0.2"))
+    lseg_retry_attempts: int = int(os.getenv("LSEG_RETRY_ATTEMPTS", "4"))
+    lseg_backoff_seconds: float = float(os.getenv("LSEG_BACKOFF_SECONDS", "10"))
 
     # Ops
     healthcheck_url: str = os.getenv("HEALTHCHECK_URL", "")

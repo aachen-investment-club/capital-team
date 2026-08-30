@@ -1,7 +1,6 @@
 """AppShell: brand header + navbar generated from the Dash page registry.
 
-Adding a page file with dash.register_page() automatically adds its nav entry —
-there is no central page list to maintain. Home is the one exception: it lives
+Adding a page file with dash.register_page() automatically adds its nav entry, there is no central page list to maintain. Home is the one exception: it lives
 behind the header logo instead of the nav list (see _nav_links).
 """
 import dash

@@ -1,4 +1,4 @@
-"""Structural Break Detection — CUSUM and Student-t BOCPD on a composite
+"""Structural Break Detection, CUSUM and Student-t BOCPD on a composite
 macro stress level signal, run against benchmarks / positions / NAV / custom."""
 import traceback
 
@@ -35,9 +35,9 @@ BENCHMARKS = {
 _C_UP, _C_DOWN, _C_LINE, _C_GREY = "#10B981", "#EF4444", "#3B82F6", "#64748B"
 
 HAZARD_OPTIONS = {
-    "1/50  — short (~10 wk)": 1 / 50,
-    "1/150 — medium (~30 wk)": 1 / 150,
-    "1/300 — long  (~60 wk)": 1 / 300,
+    "1/50: short (~10 wk)": 1 / 50,
+    "1/150: medium (~30 wk)": 1 / 150,
+    "1/300: long  (~60 wk)": 1 / 300,
 }
 
 
@@ -190,7 +190,7 @@ def _cusum_chart(price, level, cusum_sig, cusum_stats, title, k, h, height=600):
                     marker=dict(symbol=sym, size=10, color=color,
                                 line=dict(width=1, color="white")),
                     showlegend=False,
-                    hovertemplate=f"%{{x|%Y-%m-%d}} — {label}<extra></extra>"), row=1, col=1)
+                    hovertemplate=f"%{{x|%Y-%m-%d}}, {label}<extra></extra>"), row=1, col=1)
 
     lev = level.dropna()
     if not lev.empty:
@@ -219,7 +219,7 @@ def _cusum_chart(price, level, cusum_sig, cusum_stats, title, k, h, height=600):
             hovertemplate="%{x|%Y-%m-%d} S−: %{y:.3f}<extra></extra>"), row=3, col=1)
         fig.add_hline(y=0, line_width=1, line_color="rgba(255,255,255,0.2)", row=3, col=1)
 
-    title_text = (f"<b>{title} — CUSUM</b>"
+    title_text = (f"<b>{title}, CUSUM</b>"
                   f"<br><span style='font-size:11px;color:#94A3B8'>"
                   f"k={k:.2f} · h={h:.1f} · green backdrop = upward regime · "
                   f"red backdrop = downward regime</span>")
@@ -279,7 +279,7 @@ def _bocpd_chart(price, bocpd_norm, bocpd_raw, title, hazard, nu, height=580):
             hovertemplate="%{x|%Y-%m-%d}: %{y:.4f}<extra></extra>"), row=3, col=1)
 
     hazard_disp = f"hazard=1/{round(1 / hazard)}" if hazard > 0 else "hazard=0"
-    title_text = (f"<b>{title} — BOCPD</b>"
+    title_text = (f"<b>{title}, BOCPD</b>"
                   f"<br><span style='font-size:11px;color:#94A3B8'>"
                   f"{hazard_disp} · ν={nu} · red backdrop = top-20% anomaly · "
                   f"dotted line = 80th-percentile threshold</span>")
@@ -290,7 +290,7 @@ def _bocpd_chart(price, bocpd_norm, bocpd_raw, title, hazard, nu, height=580):
     fig.update_yaxes(zeroline=False)
     fig.update_xaxes(showgrid=False)
     fig.update_yaxes(title_text="Price", row=1, col=1, title_font=dict(size=10))
-    fig.update_yaxes(title_text="Surprise (0–1)", row=2, col=1, title_font=dict(size=10))
+    fig.update_yaxes(title_text="Surprise (0: 1)", row=2, col=1, title_font=dict(size=10))
     fig.update_yaxes(title_text="P(changepoint)", row=3, col=1, title_font=dict(size=10))
     return fig
 
@@ -363,7 +363,7 @@ def _summary_table(results: dict) -> dmc.Table:
     for name, r in results.items():
         sig = r["cusum_sig"]
         last_breaks = sig[sig != 0]
-        last_date = last_breaks.index[-1].strftime("%d %b %Y") if not last_breaks.empty else "—"
+        last_date = last_breaks.index[-1].strftime("%d %b %Y") if not last_breaks.empty else ": "
         state = int(last_breaks.iloc[-1]) if not last_breaks.empty else 0
         norm = r["bocpd_norm"].dropna()
         surprise = float(norm.iloc[-1]) if not norm.empty else 0.0
@@ -386,11 +386,11 @@ def _results_block(start, end, sources, custom_ric, k, h, hazard_label, nu) -> d
 
     bus = _build_signal_bus(s_str, e_str)
     if bus.get("spy_close", pd.Series(dtype=float)).empty:
-        return dmc.Alert("SPY data unavailable — cannot build signal bus.",
+        return dmc.Alert("SPY data unavailable: cannot build signal bus.",
                          color="red", variant="light")
     level_signal = bus.get("level_signal", pd.Series(dtype=float))
     if level_signal.empty:
-        return dmc.Alert("Level signal is empty — check FRED and market-data ingest.",
+        return dmc.Alert("Level signal is empty: check FRED and market-data ingest.",
                          color="red", variant="light")
 
     # Targets
@@ -457,9 +457,9 @@ def _results_block(start, end, sources, custom_ric, k, h, hazard_label, nu) -> d
     gjr_ann = bus.get("gjr_vol_ann", pd.Series(dtype=float)).dropna()
     lev_s = level_signal.dropna()
     bus_children = [dmc.SimpleGrid([
-        _metric("Stress index (latest)", f"{stress.iloc[-1]:.3f}" if not stress.empty else "—"),
-        _metric("GJR-GARCH vol (ann.)", f"{gjr_ann.iloc[-1]:.1%}" if not gjr_ann.empty else "—"),
-        _metric("Level signal (latest)", f"{lev_s.iloc[-1]:+.3f}σ" if not lev_s.empty else "—"),
+        _metric("Stress index (latest)", f"{stress.iloc[-1]:.3f}" if not stress.empty else ": "),
+        _metric("GJR-GARCH vol (ann.)", f"{gjr_ann.iloc[-1]:.1%}" if not gjr_ann.empty else ": "),
+        _metric("Level signal (latest)", f"{lev_s.iloc[-1]:+.3f}σ" if not lev_s.empty else ": "),
     ], cols={"base": 1, "sm": 3})]
     if not lev_s.empty:
         fig_bus = go.Figure()
@@ -512,7 +512,7 @@ def _results_block(start, end, sources, custom_ric, k, h, hazard_label, nu) -> d
                           config=GRAPH_CONFIG),
                 dmc.Text("Red backdrop = normalised changepoint surprise above 80th "
                          "percentile. Dotted line = 80th-percentile threshold. Panel 2: "
-                         "normalised surprise (0–1) smoothed over 20 days. Panel 3: raw "
+                         "normalised surprise (0: 1) smoothed over 20 days. Panel 3: raw "
                          "P(changepoint) from Student-t run-length distribution.",
                          size="xs", c="dimmed"),
             ]), value="bocpd"),

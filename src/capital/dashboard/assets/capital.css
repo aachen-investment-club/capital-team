@@ -47,3 +47,31 @@ h2, h3 {
     font-weight: 700;
     font-size: 1.4rem;
 }
+
+/* Collapsible explanation panels (components.explain) */
+.explain-body {
+    color: #334155;
+    font-size: 0.86rem;
+    line-height: 1.6;
+    max-width: 62rem;
+}
+.explain-body p { margin: 0 0 0.6em 0; }
+.explain-body ul, .explain-body ol { margin: 0 0 0.6em 0; padding-left: 1.2rem; }
+.explain-body li { margin-bottom: 0.25em; }
+.explain-body code {
+    background: #EFF6FF;
+    border: 1px solid #BFDBFE;
+    border-radius: 4px;
+    padding: 0 0.25em;
+    font-size: 0.85em;
+}
+.explain-body table { border-collapse: collapse; margin: 0.4em 0 0.8em 0; }
+.explain-body th, .explain-body td {
+    border-bottom: 1px solid #E2E8F0;
+    padding: 0.3em 0.9em 0.3em 0;
+    text-align: left;
+}
+.explain-body th { color: #0C1E40; font-weight: 600; }
+
+/* Factor screen: dense tables scroll inside their own container */
+.factor-table-wrap { overflow-x: auto; max-width: 100%; }

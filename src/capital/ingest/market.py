@@ -22,6 +22,16 @@ MARKET_TICKERS = ["SPY", "IWM", "TLT", "HYG", "QQQ", "GLD"]
 VIX_TICKER = "^VIX"                       # stored as VIX
 FRED_SERIES = {"BAMLH0A0HYM2": "HY_OAS"}  # {fred_id: friendly_name}
 
+# EUR crosses, stored in market_data as FX_<BASE><QUOTE> (quote units per EUR).
+# The factor model uses them to translate a multi-currency universe into one
+# numeraire; without them it estimates in local currency and says so in the run's
+# coverage report (see data.loaders.get_fx_rates).
+FX_PAIRS = {
+    "EURUSD=X": "FX_EURUSD", "EURGBP=X": "FX_EURGBP", "EURCHF=X": "FX_EURCHF",
+    "EURSEK=X": "FX_EURSEK", "EURDKK=X": "FX_EURDKK", "EURNOK=X": "FX_EURNOK",
+    "EURJPY=X": "FX_EURJPY", "EURPLN=X": "FX_EURPLN",
+}
+
 
 def run_market(days: int | None = None) -> dict:
     """Download OHLCV for the market tickers and upsert into market_data."""
@@ -29,7 +39,7 @@ def run_market(days: int | None = None) -> dict:
 
     lookback = days if days is not None else max(settings.eod_lookback_days, 5)
     start = (date.today() - timedelta(days=lookback)).isoformat()
-    all_tickers = MARKET_TICKERS + [VIX_TICKER]
+    all_tickers = MARKET_TICKERS + [VIX_TICKER] + list(FX_PAIRS)
     log.info("[MARKET] %d tickers via yfinance from %s", len(all_tickers), start)
 
     try:
@@ -43,7 +53,7 @@ def run_market(days: int | None = None) -> dict:
     con = store.write_connection()
     try:
         for yf_ticker in all_tickers:
-            name = "VIX" if yf_ticker == VIX_TICKER else yf_ticker
+            name = "VIX" if yf_ticker == VIX_TICKER else FX_PAIRS.get(yf_ticker, yf_ticker)
             try:
                 sub = raw[yf_ticker] if isinstance(raw.columns, pd.MultiIndex) else raw
                 sub = sub.dropna(subset=["Close"])

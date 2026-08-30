@@ -5,8 +5,10 @@ Everything input-independent that pages would otherwise compute per request
 lives here, so dashboard callbacks are pure reads. Full rebuild each night —
 at a few million rows this is seconds, and simpler than incremental append.
 
-Barra factor tables (factor_exposures / factor_returns) are added when the
-Barra page is ported (Phase 4/5).
+Factor-model outputs deliberately do not live here: a run is parameterised (its
+window, frequency and factor set are user choices), so it is persisted per run by
+`capital.data.factor_store` and estimated by `capital-ingest factors`, which runs
+immediately after this step in the nightly pipeline.
 """
 import logging
 

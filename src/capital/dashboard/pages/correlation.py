@@ -1,4 +1,4 @@
-"""Correlation Analysis — rolling and partial correlations for fixed market pairs,
+"""Correlation Analysis, rolling and partial correlations for fixed market pairs,
 plus a custom explorer."""
 import traceback
 
@@ -21,12 +21,12 @@ dash.register_page(
 )
 
 FIXED_PAIRS = [
-    ("SPY", "IWM", None, "Breadth", "S&P 500 vs Russell 2000 — market internals"),
-    ("SPY", "TLT", None, "Macro", "Equities vs Long Treasury — risk-on/off"),
-    ("SPY", "VIX", None, "Stress", "S&P 500 vs VIX — fear gauge"),
-    ("HYG", "TLT", None, "Liquidity", "High-Yield vs Treasury — credit/duration spread"),
+    ("SPY", "IWM", None, "Breadth", "S&P 500 vs Russell 2000: market internals"),
+    ("SPY", "TLT", None, "Macro", "Equities vs Long Treasury: risk-on/off"),
+    ("SPY", "VIX", None, "Stress", "S&P 500 vs VIX: fear gauge"),
+    ("HYG", "TLT", None, "Liquidity", "High-Yield vs Treasury: credit/duration spread"),
     ("IWM", "HYG", "SPY", "Partial: Small-cap ↔ Credit",
-     "IWM vs HYG controlling for SPY — idiosyncratic credit sensitivity"),
+     "IWM vs HYG controlling for SPY: idiosyncratic credit sensitivity"),
 ]
 
 CHART_ORDER = ["Macro", "Stress", "Breadth", "Liquidity", "Partial: Small-cap ↔ Credit"]
@@ -131,7 +131,7 @@ def _monitor_block(start, end, window_corr, window_smooth) -> dmc.Stack:
     all_tickers = tuple(sorted({t for pair in FIXED_PAIRS for t in pair[:3] if t}))
     prices = _load_prices(all_tickers, str(start), str(end))
     if prices.empty:
-        return dmc.Alert("No price data returned — check the market-data ingest.",
+        return dmc.Alert("No price data returned: check the market-data ingest.",
                          color="red", variant="light")
 
     results = {}

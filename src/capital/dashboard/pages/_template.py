@@ -1,21 +1,23 @@
 """
-COPY-PASTE PAGE TEMPLATE — the whole teammate-facing pattern.
+COPY-PASTE PAGE TEMPLATE, the whole teammate-facing pattern.
 
-1. Copy this file to capital/dashboard/pages/my_page.py (no leading underscore —
-   underscore files are not registered).
+1. Copy this file to capital/dashboard/pages/my_page.py (no leading underscore, underscore files are not registered).
 2. Adjust register_page(): path, name (navbar label), order (navbar position),
    description (home-page card).
 3. Build the layout from dmc components; get data ONLY via capital.data.loaders
    (never import boto3/duckdb in a page) and math via capital.analytics.
-4. Callbacks take small inputs (ticker, dates) and return figures — never move
+4. Callbacks take small inputs (ticker, dates) and return figures, never move
    DataFrames through the browser. Loaders are cached server-side.
-5. Heavy interactive math (optimiser, GARCH fits): run it synchronously in the
-   callback (see pages/barra.py). Do NOT use background=True — dash-mantine-
-   components 2.8.0's typed props aren't picklable by dill, so DiskcacheManager
-   crashes on any callback returning a dmc component. Revisit once that's fixed
-   upstream or the page is restructured to keep dmc components out of the
-   pickled payload (e.g. background callback returns raw data to a dcc.Store;
-   a second, non-background callback renders the dmc component from it).
+5. Heavy math, chosen by how heavy:
+   - Seconds: run it synchronously in the callback (see pages/volatility.py).
+   - Tens of seconds and up: submit it to the job queue (capital.jobs) and poll,
+     as pages/factor_screen.py does. Work runs in a subprocess, so it cannot
+     make the dashboard sluggish, results survive a reload and are visible to
+     everyone, and a crash cannot take the app down.
+   Do NOT use background=True: dash-mantine-components 2.8.0's typed props
+   aren't picklable by dill, so DiskcacheManager crashes on any callback
+   returning a dmc component. The job queue sidesteps this entirely, because
+   jobs move plain JSON and never components.
 
 Charts pick up the "capital" template automatically (capital.theme is imported
 by the app). Wrap graphs with components.graph() for the shared PNG export.
@@ -58,4 +60,4 @@ def update_chart(ticker):
     row = master[master["ticker"] == ticker]
     sid = row["security_id"].iloc[0]
     df = loaders.get_eod_prices(sid)
-    return px.line(df, x="date", y="adj_close", title=f"{ticker} — adjusted close")
+    return px.line(df, x="date", y="adj_close", title=f"{ticker}, adjusted close")

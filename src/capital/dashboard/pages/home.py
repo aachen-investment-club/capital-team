@@ -1,4 +1,4 @@
-"""Landing page — cards linking to every registered page, plus contributors."""
+"""Landing page, cards linking to every registered page, plus contributors."""
 import dash
 import dash_mantine_components as dmc
 
@@ -6,9 +6,12 @@ from capital.theme import NAVY
 
 dash.register_page(__name__, path="/", name="Home", order=0)
 
+# name, role, LinkedIn profile URL, email
 CONTRIBUTORS = [
-    ("Mathis Makarski", "Founder of the Team, creator of the dashboard"),
-    ("Nicolas Wellers", "Portfolio Manager"),
+    ("Mathis Makarski", "Founder of the Team, creator of the dashboard",
+     "https://www.linkedin.com/in/mathis-makarski", "mathis.makarski@aic.rwth-aachen.de"),
+    ("Nicolas Wellers", "Portfolio Manager",
+     "https://www.linkedin.com/in/nicolas-wellers/", "nicolas.wellers@aic.rwth-aachen.de"),
 ]
 
 
@@ -34,16 +37,25 @@ def layout():
             [
                 dmc.Text(name, fw=600, c=NAVY),
                 dmc.Text(role, size="sm", c="dimmed", mt=4),
+                dmc.Group(
+                    [
+                        dmc.Anchor("LinkedIn", href=linkedin, target="_blank",
+                                   underline="hover", size="sm") if linkedin else None,
+                        dmc.Anchor("Email", href=f"mailto:{email}",
+                                   underline="hover", size="sm") if email else None,
+                    ],
+                    gap="md", mt="sm",
+                ),
             ],
             withBorder=True, radius="md", p="lg",
         )
-        for name, role in CONTRIBUTORS
+        for name, role, linkedin, email in CONTRIBUTORS
     ]
 
     return dmc.Stack(
         [
             dmc.Title("Capital Team Dashboard", order=1, c=NAVY),
-            dmc.Text("Portfolio analytics for the Aachen Investment Club — "
+            dmc.Text("Portfolio analytics for the Aachen Investment Club: "
                      "returns, risk, factor models and market monitors.", c="dimmed"),
             dmc.SimpleGrid(cards, cols={"base": 1, "sm": 2, "lg": 3}, mt="lg"),
 

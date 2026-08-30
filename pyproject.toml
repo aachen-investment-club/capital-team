@@ -27,6 +27,9 @@ dependencies = [
     "cvxpy>=1.4.0",
     "arch>=6.3.0",
     "statsmodels>=0.14.0",
+    # Imported directly by the factor model (null-space reparameterisation of the
+    # constrained cross-sectional regression) — not just via statsmodels.
+    "scipy>=1.11.0",
     "pykalman>=0.9.7",
     "filterpy>=1.4.5",
 ]

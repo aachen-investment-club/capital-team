@@ -195,6 +195,7 @@ dependencies = [
     { name = "pyarrow" },
     { name = "pykalman" },
     { name = "python-dotenv" },
+    { name = "scipy" },
     { name = "statsmodels" },
     { name = "yfinance" },
 ]
@@ -225,6 +226,7 @@ requires-dist = [
     { name = "pyarrow", specifier = ">=14.0.0" },
     { name = "pykalman", specifier = ">=0.9.7" },
     { name = "python-dotenv", specifier = ">=1.2.2" },
+    { name = "scipy", specifier = ">=1.11.0" },
     { name = "statsmodels", specifier = ">=0.14.0" },
     { name = "yfinance", specifier = ">=1.4.1" },
 ]

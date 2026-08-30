@@ -1,4 +1,4 @@
-"""Volatility — GARCH-family backtest, model rankings, and forward forecast.
+"""Volatility, GARCH-family backtest, model rankings, and forward forecast.
 Model fitting runs as a background callback."""
 import traceback
 from datetime import date
@@ -78,9 +78,6 @@ def _get_returns(asset: str) -> pd.Series | None:
 def layout():
     today = _yesterday()
     sm = loaders.get_security_master()
-    equities = sm[sm["asset_type"] != "INDEX"]["ticker"].tolist() if not sm.empty else []
-    idx_tickers = sm[sm["asset_type"] == "INDEX"]["ticker"].tolist() if not sm.empty else []
-    asset_options = ["Portfolio"] + equities + idx_tickers
     return dmc.Stack([
         ui.page_title(
             "Volatility",
@@ -88,8 +85,9 @@ def layout():
             "is, compares model forecasts against realised vol, and projects "
             "volatility forward over your chosen horizon."),
         dmc.Group([
-            dmc.Select(id="vol-asset", label="Asset", data=asset_options,
-                       value="Portfolio", searchable=True, w=200),
+            ui.security_select("vol-asset", sm, label="Asset", value="Portfolio",
+                               w=300, value_col="ticker",
+                               extra=[{"value": "Portfolio", "label": "Portfolio"}]),
             dmc.MultiSelect(id="vol-models", label="Models", data=list(ALL_MODELS),
                             value=list(ALL_MODELS), w=260),
             dmc.DatePickerInput(id="vol-backtest-from", label="Backtest from",
@@ -126,7 +124,7 @@ def _sync_backtest_from(asset):
     default_ts = pd.Timestamp(_DEFAULT_BACKTEST_FROM)
     if (rets.index < default_ts).sum() >= 10 and (rets.index >= default_ts).sum() >= 2:
         return _DEFAULT_BACKTEST_FROM.isoformat()
-    # Not enough history before the global default — pick the date of the
+    # Not enough history before the global default, pick the date of the
     # 15th observation, guaranteeing >= 15 training obs for this asset.
     return rets.index[15].date().isoformat()
 
@@ -171,9 +169,9 @@ def _run_models(asset, models, backtest_from, horizon) -> dmc.Stack:
     verdict = None
     if "DM stat" in eval_df.columns:
         disp_eval["DM stat"] = disp_eval["DM stat"].map(
-            lambda v: f"{float(v):.3f}" if pd.notna(v) and not isinstance(v, str) else "—")
+            lambda v: f"{float(v):.3f}" if pd.notna(v) and not isinstance(v, str) else ": ")
         disp_eval["DM p-val"] = disp_eval["DM p-val"].map(
-            lambda v: f"{float(v):.3f}" if pd.notna(v) and not isinstance(v, str) else "—")
+            lambda v: f"{float(v):.3f}" if pd.notna(v) and not isinstance(v, str) else ": ")
         dm_stat, dm_p = eval_df["DM stat"].iloc[0], eval_df["DM p-val"].iloc[0]
         best, second = eval_df["Model"].iloc[0], eval_df["Model"].iloc[1]
         if pd.notna(dm_stat):
@@ -223,7 +221,7 @@ def _run_models(asset, models, backtest_from, horizon) -> dmc.Stack:
 
     n_fc_days = len(next(iter(fc["forecast"].values())))
     children = [
-        ui.section(f"Backtest — {asset}  ·  from {backtest_from}"),
+        ui.section(f"Backtest, {asset}  ·  from {backtest_from}"),
         dcc.Graph(figure=fig_bt, config=GRAPH_CONFIG),
         dmc.Text("Proxy RV is the absolute daily log-return scaled to annualised vol. "
                  "Model lines show conditional vol propagated through the test period "
@@ -237,7 +235,7 @@ def _run_models(asset, models, backtest_from, horizon) -> dmc.Stack:
     children += [
         dcc.Graph(figure=bar_fig, config=GRAPH_CONFIG),
         dmc.Divider(mt="lg"),
-        ui.section(f"Volatility Forecast — next {n_fc_days} days"),
+        ui.section(f"Volatility Forecast, next {n_fc_days} days"),
         dcc.Graph(figure=fig_fc, config=GRAPH_CONFIG),
         dmc.Text("Solid lines: in-sample conditional vol (last 90 trading days, fit on "
                  "full history). Dashed lines: multi-step-ahead forecast. GARCH-family "

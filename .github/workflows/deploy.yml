@@ -13,7 +13,19 @@ jobs:
       - name: Import smoke test
         run: |
           uv sync --frozen
-          uv run python -c "import capital.dashboard.app; import dash; assert len(dash.page_registry) == 10, sorted(dash.page_registry)"
+          uv run python -c "
+          import capital.dashboard.app, dash
+          paths = {p['path'] for p in dash.page_registry.values()}
+          assert len(dash.page_registry) == 10, sorted(paths)
+          assert '/factor-screen' in paths, sorted(paths)
+          "
+          uv run python -c "
+          from capital.analytics.factors.model import run_factor_model
+          from capital.analytics.factors.spec import ModelSpec
+          from capital.jobs import queue, handlers
+          from capital.data import factor_store
+          assert 'factor_model' in handlers.HANDLERS
+          "
 
   # config/security_master.csv is a git-tracked artifact deployed via the SSH
   # git-pull below — it is NOT synced to S3. The dashboard and the ingest both

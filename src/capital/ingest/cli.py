@@ -7,8 +7,9 @@ Subcommands:
     market    yfinance market tickers → store  (--days)
     fred      FRED series → store
     derived   rebuild derived tables (daily_returns, rolling_stats)
+    factors   estimate the nightly cross-sectional factor model
     sync      back up market.duckdb to S3
-    nightly   eod → fund → market → fred → derived → sync, with healthcheck pings
+    nightly   eod → fund → market → fred → derived → factors → sync, with pings
 
 The IBKR fund-data ingestion is a separate, independently maintained Lambda —
 deliberately not part of this CLI.
@@ -34,7 +35,7 @@ def _ping(suffix: str = "") -> None:
 
 
 def _run_nightly(args) -> int:
-    from capital.ingest import derived, eod, market, sync
+    from capital.ingest import derived, eod, factors, market, sync
 
     _ping("/start")
     failures: list[str] = []
@@ -61,6 +62,9 @@ def _run_nightly(args) -> int:
     step("market", market.run_market)
     step("fred", market.run_fred)
     step("derived", derived.run_derived)
+    # After derived (it reads the rebuilt tables) and before sync, so the backup
+    # carries the same store the model was estimated from.
+    step("factors", factors.run_factors, years=args.factor_years)
     step("sync", sync.run_sync)
 
     # EOD partial failures count: tolerate a few unresolved RICs, not a wipeout
@@ -87,18 +91,40 @@ def main(argv: list[str] | None = None) -> int:
     p_eod = sub.add_parser("eod", help="LSEG EOD OHLCV → store")
     p_eod.add_argument("--start", help="ISO date — backfill from this date")
     p_eod.add_argument("--days", type=int, help="lookback days (default from env)")
+    p_eod.add_argument("--resume", action="store_true",
+                       help="skip securities whose history already reaches --start")
+    p_eod.add_argument("--batch-size", type=int,
+                       help="RICs per request (default 50; lower it for long windows)")
 
     p_fund = sub.add_parser("fund", help="LSEG fundamentals → store")
     p_fund.add_argument("--start")
     p_fund.add_argument("--days", type=int)
+    p_fund.add_argument("--resume", action="store_true",
+                        help="skip RICs whose history already reaches --start")
+    p_fund.add_argument("--batch-size", type=int, help="RICs per request (default 10)")
+    p_fund.add_argument("--probe", action="store_true",
+                        help="resolve which TR field delivers each descriptor on "
+                             "this entitlement, cache the answer, and write no data")
 
     p_market = sub.add_parser("market", help="yfinance market tickers → store")
     p_market.add_argument("--days", type=int)
 
     sub.add_parser("fred", help="FRED series → store")
     sub.add_parser("derived", help="rebuild derived tables")
+
+    p_factors = sub.add_parser("factors", help="estimate the nightly factor model")
+    p_factors.add_argument("--years", type=int, default=3,
+                           help="estimation window length (default 3)")
+    p_factors.add_argument("--frequency", default="W-FRI",
+                           choices=["B", "W-FRI", "ME"],
+                           help="cross-section frequency (default weekly)")
+    p_factors.add_argument("--keep", type=int, default=10,
+                           help="nightly runs to retain (default 10)")
+
     sub.add_parser("sync", help="back up market.duckdb to S3")
-    sub.add_parser("nightly", help="full pipeline with healthcheck pings")
+    p_nightly = sub.add_parser("nightly", help="full pipeline with healthcheck pings")
+    p_nightly.add_argument("--factor-years", type=int, default=3,
+                           help="factor-model window length (default 3)")
 
     args = ap.parse_args(argv)
 
@@ -110,9 +136,14 @@ def main(argv: list[str] | None = None) -> int:
         eod_mod.open_lseg_session()
         try:
             if args.cmd == "eod":
-                result = eod_mod.run_eod(start=args.start, days=args.days)
+                result = eod_mod.run_eod(start=args.start, days=args.days,
+                                         resume=args.resume, batch_size=args.batch_size)
+            elif args.probe:
+                result = "\n" + eod_mod.probe_fundamental_fields().to_string(index=False)
             else:
-                result = eod_mod.run_fundamentals(start=args.start, days=args.days)
+                result = eod_mod.run_fundamentals(start=args.start, days=args.days,
+                                                  resume=args.resume,
+                                                  batch_size=args.batch_size)
         finally:
             eod_mod.close_lseg_session()
     elif args.cmd == "market":
@@ -124,6 +155,10 @@ def main(argv: list[str] | None = None) -> int:
     elif args.cmd == "derived":
         from capital.ingest import derived as derived_mod
         result = derived_mod.run_derived()
+    elif args.cmd == "factors":
+        from capital.ingest import factors as factors_mod
+        result = factors_mod.run_factors(years=args.years, frequency=args.frequency,
+                                         keep=args.keep)
     elif args.cmd == "sync":
         from capital.ingest import sync as sync_mod
         result = sync_mod.run_sync()

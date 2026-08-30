@@ -1,4 +1,4 @@
-"""Credit & Liquidity Monitor — HY-spread credit stress, SPY microstructure
+"""Credit & Liquidity Monitor, HY-spread credit stress, SPY microstructure
 liquidity, and the combined stress score."""
 import traceback
 
@@ -112,7 +112,7 @@ def _stress_chart(stress_z: pd.Series, thr_hi: float, height: int = 380) -> go.F
         height=height,
         title=dict(text=("<b>Composite Stress Score</b>"
                          "  <span style='font-size:12px;color:#94A3B8'>"
-                         "= |0.5 × (credit shock + liquidity shock)| — "
+                         "= |0.5 × (credit shock + liquidity shock)|: "
                          "<span style='color:#EF4444'>red bands = top/bottom 5% of "
                          "historical days</span></span>"),
                    x=0, xanchor="left"),
@@ -160,9 +160,9 @@ PAIRS = [
 ]
 
 ROW_DESCS = [
-    "Z-score of the raw level vs {w}-day rolling mean — slow-moving regime indicator",
-    "Z-score of the smoothed daily change — picks up rapid deterioration",
-    "Z-score of the rate-of-change of the shock — early turning-point signal",
+    "Z-score of the raw level vs {w}-day rolling mean: slow-moving regime indicator",
+    "Z-score of the smoothed daily change: picks up rapid deterioration",
+    "Z-score of the rate-of-change of the shock: early turning-point signal",
 ]
 
 
@@ -176,7 +176,7 @@ def _results_block(start, end, window) -> dmc.Stack:
     children = [dmc.Alert(e, color="yellow", variant="light") for e in raw["errors"]]
 
     if raw["hy_oas"].empty and raw["spy_close"].empty:
-        return dmc.Alert("No data loaded — check market-data and FRED ingest.",
+        return dmc.Alert("No data loaded: check market-data and FRED ingest.",
                          color="red", variant="light")
 
     signals = {}

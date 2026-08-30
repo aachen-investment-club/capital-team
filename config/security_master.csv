@@ -1,113 +1,1170 @@
-security_id,ric,ticker,isin,name,currency,asset_type,country,active,barra_universe
-SEC_009,.SPX,SPX,,S&P 500 Index,USD,INDEX,,true,false
-SEC_010,.dMSWO,MSCI_WORLD,,MSCI World Index,USD,INDEX,,true,false
-SEC_011,.MXEU0EL,MSCI_EUROPE,,MSCI Europe Index,EUR,INDEX,,true,false
-SEC_001,AIXGn.DE,AIXA,DE000A0WMPJ6,AIXTRON SE,EUR,COMMON,DE,true,true
-SEC_002,ESIF.DE,ESIF,IE00BMW42306,iShares Europe Financials UCITS ETF,EUR,ETF,,true,false
-SEC_003,SAN.MC,SAN,ES0113900J37,Banco Santander SA,EUR,COMMON,ES,true,true
-SEC_004,SMH.PA,SMH,IE00BMC38736,VanEck Semiconductor UCITS ETF,EUR,ETF,,true,false
-SEC_005,TRNT.L,TRNl,GB00BKDTK925,Trainline PLC,GBP,COMMON,GB,true,true
-SEC_006,GLURNU.L,URNU,IE000NDWFGA5,Global X Uranium UCITS ETF,USD,ETF,,true,false
-SEC_007,WDEF.L,WDEF,IE0002Y8CX98,WisdomTree Europe Defence UCITS ETF,EUR,ETF,,true,false
-SEC_008,XLUS.L,XLUS,IE00B3VPKB53,Invesco US Utilities S&P UCITS ETF,USD,ETF,,true,false
-SEC_012,COPA.L,COPAl,GB00B15KXQ89,WisdomTree Copper ETP,USD,ETF,,true,false
-SEC_013,PURR.O,PURR,US44916Y1064,Hyperliquid Strategies Inc,USD,COMMON,,true,false
-SEC_014,ASML.AS,ASML,,ASML Holding NV,EUR,COMMON,NL,true,true
-SEC_015,NOVOb.CO,NOVOB,,Novo Nordisk A/S,DKK,COMMON,DK,true,true
-SEC_016,LVMH.PA,MC,,LVMH Moet Hennessy Louis Vuitton SE,EUR,COMMON,FR,true,true
-SEC_017,SAPG.DE,SAP,,SAP SE,EUR,COMMON,DE,true,true
-SEC_018,TTEF.PA,TTE,,TotalEnergies SE,EUR,COMMON,FR,true,true
-SEC_019,OREP.PA,OR,,L Oreal SA,EUR,COMMON,FR,true,true
-SEC_020,SIEGn.DE,SIE,,Siemens AG,EUR,COMMON,DE,true,true
-SEC_021,BASFn.DE,BAS,,BASF SE,EUR,COMMON,DE,true,true
-SEC_022,ALVG.DE,ALV,,Allianz SE,EUR,COMMON,DE,true,true
-SEC_023,BNPP.PA,BNP,,BNP Paribas SA,EUR,COMMON,FR,true,true
-SEC_024,DTEGn.DE,DTE,,Deutsche Telekom AG,EUR,COMMON,DE,true,true
-SEC_025,AIR.PA,AIR,,Airbus SE,EUR,COMMON,FR,true,true
-SEC_026,SCHN.PA,SU,,Schneider Electric SE,EUR,COMMON,FR,true,true
-SEC_027,SASY.PA,SAN_FR,,Sanofi SA,EUR,COMMON,FR,true,true
-SEC_028,AIRP.PA,AI,,Air Liquide SA,EUR,COMMON,FR,true,true
-SEC_029,AXAF.PA,CS,,AXA SA,EUR,COMMON,FR,true,true
-SEC_030,CRDI.MI,UCG,,UniCredit SpA,EUR,COMMON,IT,true,true
-SEC_031,ISP.MI,ISP,,Intesa Sanpaolo SpA,EUR,COMMON,IT,true,true
-SEC_032,STLAM.MI,STLAM,,Stellantis NV,EUR,COMMON,NL,true,true
-SEC_033,IBE.MC,IBE,,Iberdrola SA,EUR,COMMON,ES,true,true
-SEC_034,BBVA.MC,BBVA,,BBVA SA,EUR,COMMON,ES,true,true
-SEC_035,ITX.MC,ITX,,Inditex SA,EUR,COMMON,ES,true,true
-SEC_036,MT.AS,MT,,ArcelorMittal SA,EUR,COMMON,LU,true,true
-SEC_037,INGA.AS,INGA,,ING Groep NV,EUR,COMMON,NL,true,true
-SEC_038,SHEL.L,SHEL,,Shell Plc,GBP,COMMON,GB,true,true
-SEC_039,AZN.L,AZN,,AstraZeneca Plc,GBP,COMMON,GB,true,true
-SEC_040,HSBA.L,HSBA,,HSBC Holdings Plc,GBP,COMMON,GB,true,true
-SEC_041,GSK.L,GSK,,GSK Plc,GBP,COMMON,GB,true,true
-SEC_042,BP.L,BP,,BP Plc,GBP,COMMON,GB,true,true
-SEC_043,ULVR.L,ULVR,,Unilever Plc,GBP,COMMON,GB,true,true
-SEC_044,DGE.L,DGE,,Diageo Plc,GBP,COMMON,GB,true,true
-SEC_045,RIO.L,RIO,,Rio Tinto Plc,GBP,COMMON,GB,true,true
-SEC_046,BARC.L,BARC,,Barclays Plc,GBP,COMMON,GB,true,true
-SEC_047,LLOY.L,LLOY,,Lloyds Banking Group Plc,GBP,COMMON,GB,true,true
-SEC_048,VOD.L,VOD,,Vodafone Group Plc,GBP,COMMON,GB,true,true
-SEC_049,NG.L,NG,,National Grid Plc,GBP,COMMON,GB,true,true
-SEC_050,MUVGn.DE,MUV2,,Munich Re AG,EUR,COMMON,DE,true,true
-SEC_051,BAYGn.DE,BAYN,,Bayer AG,EUR,COMMON,DE,true,true
-SEC_052,BMWG.DE,BMW,,BMW AG,EUR,COMMON,DE,true,true
-SEC_053,MBGn.DE,MBG,,Mercedes-Benz Group AG,EUR,COMMON,DE,true,true
-SEC_054,VOWG_p.DE,VOW3,,Volkswagen AG Preferred,EUR,COMMON,DE,true,true
-SEC_055,DBKGn.DE,DBK,,Deutsche Bank AG,EUR,COMMON,DE,true,true
-SEC_056,IFXGn.DE,IFX,,Infineon Technologies AG,EUR,COMMON,DE,true,true
-SEC_057,ADSGn.DE,ADS,,Adidas AG,EUR,COMMON,DE,true,true
-SEC_058,NESTE.HE,NESTE,,Neste Oyj,EUR,COMMON,FI,true,true
-SEC_059,SAMPO.HE,SAMPO,,Sampo Oyj,EUR,COMMON,FI,true,true
-SEC_060,NOKIA.HE,NOKIA,,Nokia Oyj,EUR,COMMON,FI,true,true
-SEC_061,STERV.HE,STERV,,Stora Enso Oyj,EUR,COMMON,FI,true,true
-SEC_062,ERICB.ST,ERICB,,Ericsson AB,SEK,COMMON,SE,true,true
-SEC_063,VOLVA.ST,VOLVA,,Volvo AB,SEK,COMMON,SE,true,true
-SEC_064,ATCOA.ST,ATCOA,,Atlas Copco AB,SEK,COMMON,SE,true,true
-SEC_065,ESSITYb.ST,ESSITYB,,Essity AB,SEK,COMMON,SE,true,true
-SEC_066,SWEDA.ST,SWEDA,,Swedbank AB,SEK,COMMON,SE,true,true
-SEC_067,INVEb.ST,INVEB,,Investor AB,SEK,COMMON,SE,true,true
-SEC_068,HEXAb.ST,HEXAB,,Hexagon AB,SEK,COMMON,SE,true,true
-SEC_069,ABBN.S,ABBN,,ABB Ltd,CHF,COMMON,CH,true,true
-SEC_070,NESN.S,NESN,,Nestle SA,CHF,COMMON,CH,true,true
-SEC_071,ROG.S,ROG,,Roche Holding AG,CHF,COMMON,CH,true,true
-SEC_072,NOVN.S,NOVN,,Novartis AG,CHF,COMMON,CH,true,true
-SEC_073,UBSG.S,UBSG,,UBS Group AG,CHF,COMMON,CH,true,true
-SEC_074,CSGN.S,CSGN,,Credit Suisse Group AG,CHF,COMMON,CH,false,true
-SEC_075,ZURN.S,ZURN,,Zurich Insurance Group AG,CHF,COMMON,CH,true,true
-SEC_076,CFR.S,CFR,,Cie Financiere Richemont SA,CHF,COMMON,CH,true,true
-SEC_077,SRENH.S,SREN,,Swiss Re AG,CHF,COMMON,CH,true,true
-SEC_078,LONN.S,LONN,,Lonza Group AG,CHF,COMMON,CH,true,true
-SEC_079,GIVN.S,GIVN,,Givaudan SA,CHF,COMMON,CH,true,true
-SEC_080,DHER.DE,DHER,,Delivery Hero SE,EUR,COMMON,DE,true,true
-SEC_081,ENEI.MI,ENEL,,Enel SpA,EUR,COMMON,IT,true,true
-SEC_082,RACE.MI,RACE,,Ferrari NV,EUR,COMMON,NL,true,true
-SEC_083,MONC.MI,MONC,,Moncler SpA,EUR,COMMON,IT,true,true
-SEC_084,ESLX.PA,LUX,,EssilorLuxottica SA,EUR,COMMON,FR,true,true
-SEC_085,MDBI.MI,MB,,Mediobanca SpA,EUR,COMMON,IT,true,true
-SEC_086,EDP.LS,EDP,,EDP Energias de Portugal SA,EUR,COMMON,PT,true,true
-SEC_087,GALP.LS,GALP,,Galp Energia SGPS SA,EUR,COMMON,PT,true,true
-SEC_088,JMT.LS,JMT,,Jeronimo Martins SGPS SA,EUR,COMMON,PT,true,true
-SEC_089,PSON.L,PSON,,Pearson Plc,GBP,COMMON,GB,true,true
-SEC_090,EXPN.L,EXPN,,Experian Plc,GBP,COMMON,GB,true,true
-SEC_091,REL.L,REL,,RELX Plc,GBP,COMMON,GB,true,true
-SEC_092,CPG.L,CPG,,Compass Group Plc,GBP,COMMON,GB,true,true
-SEC_093,BATS.L,BATS,,British American Tobacco Plc,GBP,COMMON,GB,true,true
-SEC_094,IMB.L,IMB,,Imperial Brands Plc,GBP,COMMON,GB,true,true
-SEC_095,LGEN.L,LGEN,,Legal and General Group Plc,GBP,COMMON,GB,true,true
-SEC_096,PRUD.L,PRU,,Prudential Plc,GBP,COMMON,GB,true,true
-SEC_097,SJP.L,STJ,,St James Place Plc,GBP,COMMON,GB,true,true
-SEC_098,WPP.L,WPP,,WPP Plc,GBP,COMMON,GB,true,true
-SEC_099,SGE.L,SGE,,Sage Group Plc,GBP,COMMON,GB,true,true
-SEC_100,AUTO.L,AUTO,,Auto Trader Group Plc,GBP,COMMON,GB,false,true
-SEC_101,MNDI.L,MNDI,,Mondi Plc,GBP,COMMON,GB,true,true
-SEC_102,SMDS.L,SMDS,,DS Smith Plc,GBP,COMMON,GB,false,true
-SEC_103,ENI.MI,ENI,,ENI SpA,EUR,COMMON,IT,true,true
-SEC_104,PRY.MI,PRY,,Prysmian SpA,EUR,COMMON,IT,true,true
-SEC_105,ATL.MI,ATL,,Atlantia SpA,EUR,COMMON,IT,false,true
-SEC_106,ORAN.PA,ORA,,Orange SA,EUR,COMMON,FR,true,true
-SEC_107,ENGIE.PA,ENGI,,Engie SA,EUR,COMMON,FR,true,true
-SEC_108,PUBP.PA,PUB,,Publicis Groupe SA,EUR,COMMON,FR,true,true
-SEC_109,CAPP.PA,CAP,,Capgemini SE,EUR,COMMON,FR,true,true
-SEC_110,DAST.PA,DSY,,Dassault Systemes SE,EUR,COMMON,FR,true,true
-SEC_111,ALSO.PA,ALO,,Alstom SA,EUR,COMMON,FR,true,true
-SEC_112,VIE.PA,VIE,,Veolia Environnement SA,EUR,COMMON,FR,true,true
+security_id,ric,ticker,isin,name,currency,asset_type,country,active
+SEC_009,.SPX,SPX,,S&P 500 Index,USD,INDEX,,true
+SEC_010,.dMSWO,MSCI_WORLD,,MSCI World Index,USD,INDEX,,true
+SEC_011,.MXEU0EL,MSCI_EUROPE,,MSCI Europe Index,EUR,INDEX,,true
+SEC_001,AIXGn.DE,AIXA,DE000A0WMPJ6,AIXTRON SE,EUR,COMMON,DE,true
+SEC_002,ESIF.DE,ESIF,IE00BMW42306,iShares Europe Financials UCITS ETF,EUR,ETF,,true
+SEC_003,SAN.MC,SAN,ES0113900J37,Banco Santander SA,EUR,COMMON,ES,true
+SEC_004,SMH.PA,SMH,IE00BMC38736,VanEck Semiconductor UCITS ETF,EUR,ETF,,true
+SEC_005,TRNT.L,TRNl,GB00BKDTK925,Trainline PLC,GBP,COMMON,GB,true
+SEC_006,GLURNU.L,URNU,IE000NDWFGA5,Global X Uranium UCITS ETF,USD,ETF,,true
+SEC_007,WDEF.L,WDEF,IE0002Y8CX98,WisdomTree Europe Defence UCITS ETF,EUR,ETF,,true
+SEC_008,XLUS.L,XLUS,IE00B3VPKB53,Invesco US Utilities S&P UCITS ETF,USD,ETF,,true
+SEC_012,COPA.L,COPAl,GB00B15KXQ89,WisdomTree Copper ETP,USD,ETF,,true
+SEC_013,PURR.O,PURR,US44916Y1064,Hyperliquid Strategies Inc,USD,COMMON,,true
+SEC_014,ASML.AS,ASML,,ASML Holding NV,EUR,COMMON,NL,true
+SEC_015,NOVOb.CO,NOVOB,,Novo Nordisk A/S,DKK,COMMON,DK,true
+SEC_016,LVMH.PA,MC,,LVMH Moet Hennessy Louis Vuitton SE,EUR,COMMON,FR,true
+SEC_017,SAPG.DE,SAP,,SAP SE,EUR,COMMON,DE,true
+SEC_018,TTEF.PA,TTE,,TotalEnergies SE,EUR,COMMON,FR,true
+SEC_019,OREP.PA,OR,,L Oreal SA,EUR,COMMON,FR,true
+SEC_020,SIEGn.DE,SIE,,Siemens AG,EUR,COMMON,DE,true
+SEC_021,BASFn.DE,BAS,,BASF SE,EUR,COMMON,DE,true
+SEC_022,ALVG.DE,ALV,,Allianz SE,EUR,COMMON,DE,true
+SEC_023,BNPP.PA,BNP,,BNP Paribas SA,EUR,COMMON,FR,true
+SEC_024,DTEGn.DE,DTE,,Deutsche Telekom AG,EUR,COMMON,DE,true
+SEC_025,AIR.PA,AIR,,Airbus SE,EUR,COMMON,FR,true
+SEC_026,SCHN.PA,SU,,Schneider Electric SE,EUR,COMMON,FR,true
+SEC_027,SASY.PA,SAN_FR,,Sanofi SA,EUR,COMMON,FR,true
+SEC_028,AIRP.PA,AI,,Air Liquide SA,EUR,COMMON,FR,true
+SEC_029,AXAF.PA,CS,,AXA SA,EUR,COMMON,FR,true
+SEC_030,CRDI.MI,UCG,,UniCredit SpA,EUR,COMMON,IT,true
+SEC_031,ISP.MI,ISP,,Intesa Sanpaolo SpA,EUR,COMMON,IT,true
+SEC_032,STLAM.MI,STLAM,,Stellantis NV,EUR,COMMON,NL,true
+SEC_033,IBE.MC,IBE,,Iberdrola SA,EUR,COMMON,ES,true
+SEC_034,BBVA.MC,BBVA,,BBVA SA,EUR,COMMON,ES,true
+SEC_035,ITX.MC,ITX,,Inditex SA,EUR,COMMON,ES,true
+SEC_036,MT.AS,MT,,ArcelorMittal SA,EUR,COMMON,LU,true
+SEC_037,INGA.AS,INGA,,ING Groep NV,EUR,COMMON,NL,true
+SEC_038,SHEL.L,SHEL,,Shell Plc,GBP,COMMON,GB,true
+SEC_039,AZN.L,AZN,,AstraZeneca Plc,GBP,COMMON,GB,true
+SEC_040,HSBA.L,HSBA,,HSBC Holdings Plc,GBP,COMMON,GB,true
+SEC_041,GSK.L,GSK,,GSK Plc,GBP,COMMON,GB,true
+SEC_042,BP.L,BP,,BP Plc,GBP,COMMON,GB,true
+SEC_043,ULVR.L,ULVR,,Unilever Plc,GBP,COMMON,GB,true
+SEC_044,DGE.L,DGE,,Diageo Plc,GBP,COMMON,GB,true
+SEC_045,RIO.L,RIO,,Rio Tinto Plc,GBP,COMMON,GB,true
+SEC_046,BARC.L,BARC,,Barclays Plc,GBP,COMMON,GB,true
+SEC_047,LLOY.L,LLOY,,Lloyds Banking Group Plc,GBP,COMMON,GB,true
+SEC_048,VOD.L,VOD,,Vodafone Group Plc,GBP,COMMON,GB,true
+SEC_049,NG.L,NG,,National Grid Plc,GBP,COMMON,GB,true
+SEC_050,MUVGn.DE,MUV2,,Munich Re AG,EUR,COMMON,DE,true
+SEC_051,BAYGn.DE,BAYN,,Bayer AG,EUR,COMMON,DE,true
+SEC_052,BMWG.DE,BMW,,BMW AG,EUR,COMMON,DE,true
+SEC_053,MBGn.DE,MBG,,Mercedes-Benz Group AG,EUR,COMMON,DE,true
+SEC_054,VOWG_p.DE,VOW3,,Volkswagen AG Preferred,EUR,COMMON,DE,true
+SEC_055,DBKGn.DE,DBK,,Deutsche Bank AG,EUR,COMMON,DE,true
+SEC_056,IFXGn.DE,IFX,,Infineon Technologies AG,EUR,COMMON,DE,true
+SEC_057,ADSGn.DE,ADS,,Adidas AG,EUR,COMMON,DE,true
+SEC_058,NESTE.HE,NESTE,,Neste Oyj,EUR,COMMON,FI,true
+SEC_059,SAMPO.HE,SAMPO,,Sampo Oyj,EUR,COMMON,FI,true
+SEC_060,NOKIA.HE,NOKIA,,Nokia Oyj,EUR,COMMON,FI,true
+SEC_061,STERV.HE,STERV,,Stora Enso Oyj,EUR,COMMON,FI,true
+SEC_062,ERICB.ST,ERICB,,Ericsson AB,SEK,COMMON,SE,true
+SEC_063,VOLVA.ST,VOLVA,,Volvo AB,SEK,COMMON,SE,true
+SEC_064,ATCOA.ST,ATCOA,,Atlas Copco AB,SEK,COMMON,SE,true
+SEC_065,ESSITYb.ST,ESSITYB,,Essity AB,SEK,COMMON,SE,true
+SEC_066,SWEDA.ST,SWEDA,,Swedbank AB,SEK,COMMON,SE,true
+SEC_067,INVEb.ST,INVEB,,Investor AB,SEK,COMMON,SE,true
+SEC_068,HEXAb.ST,HEXAB,,Hexagon AB,SEK,COMMON,SE,true
+SEC_069,ABBN.S,ABBN,,ABB Ltd,CHF,COMMON,CH,true
+SEC_070,NESN.S,NESN,,Nestle SA,CHF,COMMON,CH,true
+SEC_071,ROG.S,ROG,,Roche Holding AG,CHF,COMMON,CH,true
+SEC_072,NOVN.S,NOVN,,Novartis AG,CHF,COMMON,CH,true
+SEC_073,UBSG.S,UBSG,,UBS Group AG,CHF,COMMON,CH,true
+SEC_074,CSGN.S,CSGN,,Credit Suisse Group AG,CHF,COMMON,CH,false
+SEC_075,ZURN.S,ZURN,,Zurich Insurance Group AG,CHF,COMMON,CH,true
+SEC_076,CFR.S,CFR,,Cie Financiere Richemont SA,CHF,COMMON,CH,true
+SEC_077,SRENH.S,SREN,,Swiss Re AG,CHF,COMMON,CH,true
+SEC_078,LONN.S,LONN,,Lonza Group AG,CHF,COMMON,CH,true
+SEC_079,GIVN.S,GIVN,,Givaudan SA,CHF,COMMON,CH,true
+SEC_080,DHER.DE,DHER,,Delivery Hero SE,EUR,COMMON,DE,true
+SEC_081,ENEI.MI,ENEL,,Enel SpA,EUR,COMMON,IT,true
+SEC_082,RACE.MI,RACE,,Ferrari NV,EUR,COMMON,NL,true
+SEC_083,MONC.MI,MONC,,Moncler SpA,EUR,COMMON,IT,true
+SEC_084,ESLX.PA,LUX,,EssilorLuxottica SA,EUR,COMMON,FR,true
+SEC_085,MDBI.MI,MB,,Mediobanca SpA,EUR,COMMON,IT,true
+SEC_086,EDP.LS,EDP,,EDP Energias de Portugal SA,EUR,COMMON,PT,true
+SEC_087,GALP.LS,GALP,,Galp Energia SGPS SA,EUR,COMMON,PT,true
+SEC_088,JMT.LS,JMT,,Jeronimo Martins SGPS SA,EUR,COMMON,PT,true
+SEC_089,PSON.L,PSON,,Pearson Plc,GBP,COMMON,GB,true
+SEC_090,EXPN.L,EXPN,,Experian Plc,GBP,COMMON,GB,true
+SEC_091,REL.L,REL,,RELX Plc,GBP,COMMON,GB,true
+SEC_092,CPG.L,CPG,,Compass Group Plc,GBP,COMMON,GB,true
+SEC_093,BATS.L,BATS,,British American Tobacco Plc,GBP,COMMON,GB,true
+SEC_094,IMB.L,IMB,,Imperial Brands Plc,GBP,COMMON,GB,true
+SEC_095,LGEN.L,LGEN,,Legal and General Group Plc,GBP,COMMON,GB,true
+SEC_096,PRUD.L,PRU,,Prudential Plc,GBP,COMMON,GB,true
+SEC_097,SJP.L,STJ,,St James Place Plc,GBP,COMMON,GB,true
+SEC_098,WPP.L,WPP,,WPP Plc,GBP,COMMON,GB,true
+SEC_099,SGE.L,SGE,,Sage Group Plc,GBP,COMMON,GB,true
+SEC_100,AUTO.L,AUTO,,Auto Trader Group Plc,GBP,COMMON,GB,false
+SEC_101,MNDI.L,MNDI,,Mondi Plc,GBP,COMMON,GB,true
+SEC_102,SMDS.L,SMDS,,DS Smith Plc,GBP,COMMON,GB,false
+SEC_103,ENI.MI,ENI,,ENI SpA,EUR,COMMON,IT,true
+SEC_104,PRY.MI,PRY,,Prysmian SpA,EUR,COMMON,IT,true
+SEC_105,ATL.MI,ATL,,Atlantia SpA,EUR,COMMON,IT,false
+SEC_106,ORAN.PA,ORA,,Orange SA,EUR,COMMON,FR,true
+SEC_107,ENGIE.PA,ENGI,,Engie SA,EUR,COMMON,FR,true
+SEC_108,PUBP.PA,PUB,,Publicis Groupe SA,EUR,COMMON,FR,true
+SEC_109,CAPP.PA,CAP,,Capgemini SE,EUR,COMMON,FR,true
+SEC_110,DAST.PA,DSY,,Dassault Systemes SE,EUR,COMMON,FR,true
+SEC_111,ALSO.PA,ALO,,Alstom SA,EUR,COMMON,FR,true
+SEC_112,VIE.PA,VIE,,Veolia Environnement SA,EUR,COMMON,FR,true
+SEC_0113,NVDA.OQ,NVDA,,NVIDIA Corporation,USD,COMMON,US,true
+SEC_0114,AAPL.OQ,AAPL,,Apple Inc.,USD,COMMON,US,true
+SEC_0115,GOOGL.OQ,GOOGL,,Alphabet Inc.,USD,COMMON,US,true
+SEC_0116,GOOG.OQ,GOOG,,Alphabet Inc.,USD,COMMON,US,true
+SEC_0117,MSFT.OQ,MSFT,,Microsoft Corporation,USD,COMMON,US,true
+SEC_0118,AMZN.OQ,AMZN,,Amazon.com Inc,USD,COMMON,US,true
+SEC_0119,SPCX.OQ,SPCX,,Space Exploration Technologies Corp,USD,COMMON,US,true
+SEC_0120,AVGO.OQ,AVGO,,Broadcom Inc,USD,COMMON,US,true
+SEC_0121,META.OQ,META,,"Meta Platforms, Inc.",USD,COMMON,US,true
+SEC_0122,TSLA.OQ,TSLA,,Tesla Inc,USD,COMMON,US,true
+SEC_0123,LLY.N,LLY,,Eli Lilly and Company,USD,COMMON,US,true
+SEC_0124,BRKb.N,BRKB,,Berkshire Hathaway Inc,USD,COMMON,US,true
+SEC_0125,MU.OQ,MU,,"Micron Technology, Inc.",USD,COMMON,US,true
+SEC_0126,ATCOa.ST,ATCOA2,,Atlas Copco AB,SEK,COMMON,SE,true
+SEC_0127,JPM.N,JPM,,JPMorgan Chase & Co,USD,COMMON,US,true
+SEC_0128,EQNR.OL,EQNR,,Equinor ASA,NOK,COMMON,NO,true
+SEC_0129,WMT.OQ,WMT,,Walmart Inc,USD,COMMON,US,true
+SEC_0130,AMD.OQ,AMD,,"Advanced Micro Devices, Inc.",USD,COMMON,US,true
+SEC_0131,VOLVb.ST,VOLVB,,Volvo AB,SEK,COMMON,SE,true
+SEC_0132,V.N,V,,Visa Inc.,USD,COMMON,US,true
+SEC_0133,ASML.OQ,ASML2,,ASML Holding N.V.,USD,COMMON,US,true
+SEC_0134,JNJ.N,JNJ,,Johnson & Johnson,USD,COMMON,US,true
+SEC_0135,XOM.N,XOM,,Exxonmobil Holdings Corp,USD,COMMON,US,true
+SEC_0136,MA.N,MA,,Mastercard Incorporated,USD,COMMON,US,true
+SEC_0137,SAND.ST,SAND,,Sandvik AB,SEK,COMMON,SE,true
+SEC_0138,INTC.OQ,INTC,,Intel Corp,USD,COMMON,US,true
+SEC_0139,DNB.OL,DNB,,DNB Bank ASA,NOK,COMMON,NO,true
+SEC_0140,ABBV.N,ABBV,,AbbVie Inc.,USD,COMMON,US,true
+SEC_0141,SEBa.ST,SEBA,,Skandinaviska Enskilda Banken AB,SEK,COMMON,SE,true
+SEC_0142,PLTR.OQ,PLTR,,Palantir Technologies Inc.,USD,COMMON,US,true
+SEC_0143,BAC.N,BAC,,Bank of America Corporation,USD,COMMON,US,true
+SEC_0144,ORCL.N,ORCL,,Oracle Corporation,USD,COMMON,US,true
+SEC_0145,CSCO.OQ,CSCO,,Cisco Systems Inc,USD,COMMON,US,true
+SEC_0146,SWEDa.ST,SWEDA2,,Swedbank AB,SEK,COMMON,SE,true
+SEC_0147,COST.OQ,COST,,Costco Wholesale Corp,USD,COMMON,US,true
+SEC_0148,EQTAB.ST,EQTAB,,EQT AB,SEK,COMMON,SE,true
+SEC_0149,CVX.N,CVX,,Chevron Corporation,USD,COMMON,US,true
+SEC_0150,KO.N,KO,,Coca-Cola Co,USD,COMMON,US,true
+SEC_0151,ASSAb.ST,ASSAB,,Assa Abloy AB,SEK,COMMON,SE,true
+SEC_0152,LRCX.OQ,LRCX,,Lam Research Corporation,USD,COMMON,US,true
+SEC_0153,CAT.N,CAT,,Caterpillar Inc,USD,COMMON,US,true
+SEC_0154,AMAT.OQ,AMAT,,Applied Materials Inc,USD,COMMON,US,true
+SEC_0155,MRK.N,MRK,,Merck & Co Inc,USD,COMMON,US,true
+SEC_0156,GE.N,GE,,General Electric Company,USD,COMMON,US,true
+SEC_0157,UNH.N,UNH,,UnitedHealth Group Inc,USD,COMMON,US,true
+SEC_0158,SAABb.ST,SAABB,,Saab AB,SEK,COMMON,SE,true
+SEC_0159,NFLX.OQ,NFLX,,"Netflix, Inc.",USD,COMMON,US,true
+SEC_0160,MS.N,MS,,Morgan Stanley,USD,COMMON,US,true
+SEC_0161,PG.N,PG,,The Procter & Gamble Company,USD,COMMON,US,true
+SEC_0162,DSV.CO,DSV,,DSV A/S,DKK,COMMON,DK,true
+SEC_0163,HD.N,HD,,"The Home Depot, Inc.",USD,COMMON,US,true
+SEC_0164,ERICb.ST,ERICB2,,Telefonaktiebolaget LM Ericsson,SEK,COMMON,SE,true
+SEC_0165,MAERSKb.CO,MAERSKB,,AP Moeller - Maersk A/S,DKK,COMMON,DK,true
+SEC_0166,EPIRa.ST,EPIRA,,Epiroc AB,SEK,COMMON,SE,true
+SEC_0167,DANSKE.CO,DANSKE,,Danske Bank A/S,DKK,COMMON,DK,true
+SEC_0168,PANW.OQ,PANW,,"Palo Alto Networks, Inc.",USD,COMMON,US,true
+SEC_0169,GS.N,GS,,Goldman Sachs Group Inc,USD,COMMON,US,true
+SEC_0170,PM.N,PM,,Philip Morris International Inc,USD,COMMON,US,true
+SEC_0171,SHBa.ST,SHBA,,Svenska Handelsbanken AB,SEK,COMMON,SE,true
+SEC_0172,DELL.N,DELL,,Dell Technologies Inc,USD,COMMON,US,true
+SEC_0173,ROPC.S,ROPC,,Roche Holding AG,CHF,COMMON,CH,true
+SEC_0174,RTX.N,RTX,,RTX Corporation,USD,COMMON,US,true
+SEC_0175,KOG.OL,KOG,,Kongsberg Gruppen ASA,NOK,COMMON,NO,true
+SEC_0176,WFC.N,WFC,,Wells Fargo & Co,USD,COMMON,US,true
+SEC_0177,ARM.OQ,ARM,,ARM Holdings PLC,USD,COMMON,US,true
+SEC_0178,HMb.ST,HMB,,H and M Hennes and Mauritz AB,SEK,COMMON,SE,true
+SEC_0179,ANET.N,ANET,,"Arista Networks, Inc.",USD,COMMON,US,true
+SEC_0180,GEV.N,GEV,,GE Vernova Inc.,USD,COMMON,US,true
+SEC_0181,ALFA.ST,ALFA,,Alfa Laval AB (publ),SEK,COMMON,SE,true
+SEC_0182,INDUc.ST,INDUC,,Industrivarden AB,SEK,COMMON,SE,true
+SEC_0183,TXN.OQ,TXN,,Texas Instruments Inc,USD,COMMON,US,true
+SEC_0184,AMGN.OQ,AMGN,,Amgen Inc,USD,COMMON,US,true
+SEC_0185,TMO.N,TMO,,Thermo Fisher Scientific Inc,USD,COMMON,US,true
+SEC_0186,KLAC.OQ,KLAC,,KLA Corporation,USD,COMMON,US,true
+SEC_0187,LIN.OQ,LIN,,Linde PLC,USD,COMMON,US,true
+SEC_0188,AXP.N,AXP,,American Express Company,USD,COMMON,US,true
+SEC_0189,CRWD.OQ,CRWD,,"CrowdStrike Holdings, Inc.",USD,COMMON,US,true
+SEC_0190,C.N,C,,Citigroup Inc,USD,COMMON,US,true
+SEC_0191,AKRBP.OL,AKRBP,,Aker BP ASA,NOK,COMMON,NO,true
+SEC_0192,IBM.N,IBM,,International Business Machines Corporation,USD,COMMON,US,true
+SEC_0193,SNDK.OQ,SNDK,,SanDisk Corporation,USD,COMMON,US,true
+SEC_0194,SHEL.AS,SHEL2,,Shell PLC,EUR,COMMON,NL,true
+SEC_0195,CRM.N,CRM,,"Salesforce, Inc.",USD,COMMON,US,true
+SEC_0196,VWS.CO,VWS,,Vestas Wind Systems A/S,DKK,COMMON,DK,true
+SEC_0197,VZ.N,VZ,,Verizon Communications Inc,USD,COMMON,US,true
+SEC_0198,SHOP.OQ,SHOP,,Shopify Inc.,USD,COMMON,US,true
+SEC_0199,ABT.N,ABT,,Abbott Laboratories,USD,COMMON,US,true
+SEC_0200,TMUS.OQ,TMUS,,T-Mobile US Inc,USD,COMMON,US,true
+SEC_0201,APH.N,APH,,Amphenol Corp,USD,COMMON,US,true
+SEC_0202,NSISb.CO,NSISB,,Novozymes A/S,DKK,COMMON,DK,true
+SEC_0203,PEP.OQ,PEP,,"PepsiCo, Inc.",USD,COMMON,US,true
+SEC_0204,SCHW.N,SCHW,,The Charles Schwab Corporation,USD,COMMON,US,true
+SEC_0205,MRVL.OQ,MRVL,,"Marvell Technology, Inc.",USD,COMMON,US,true
+SEC_0206,BLK.N,BLK,,"BlackRock, Inc.",USD,COMMON,US,true
+SEC_0207,STX.OQ,STX,,Seagate Technology Holdings PLC,USD,COMMON,US,true
+SEC_0208,TEL.OL,TEL,,Telenor ASA,NOK,COMMON,NO,true
+SEC_0209,MCD.N,MCD,,McDonald's Corp,USD,COMMON,US,true
+SEC_0210,DIS.N,DIS,,The Walt Disney Company,USD,COMMON,US,true
+SEC_0211,NHY.OL,NHY,,Norsk Hydro ASA,NOK,COMMON,NO,true
+SEC_0212,ORSTED.CO,ORSTED,,Oersted A/S,DKK,COMMON,DK,true
+SEC_0213,UNP.N,UNP,,Union Pacific Corporation,USD,COMMON,US,true
+SEC_0214,GILD.OQ,GILD,,"Gilead Sciences, Inc.",USD,COMMON,US,true
+SEC_0215,T.N,T,,AT&T Inc,USD,COMMON,US,true
+SEC_0216,ADI.OQ,ADI,,"Analog Devices, Inc.",USD,COMMON,US,true
+SEC_0217,PKN.WA,PKN,,ORLEN S.A.,PLN,COMMON,PL,true
+SEC_0218,TELIA.ST,TELIA,,Telia Company AB (publ),SEK,COMMON,SE,true
+SEC_0219,QCOM.OQ,QCOM,,QUALCOMM Incorporated,USD,COMMON,US,true
+SEC_0220,WELL.N,WELL,,Welltower Inc.,USD,COMMON,US,true
+SEC_0221,NEE.N,NEE,,"NextEra Energy, Inc.",USD,COMMON,US,true
+SEC_0222,BX.N,BX,,Blackstone Inc.,USD,COMMON,US,true
+SEC_0223,DE.N,DE,,Deere & Co,USD,COMMON,US,true
+SEC_0224,HRMS.PA,HRMS,,Hermes International SCA,EUR,COMMON,FR,true
+SEC_0225,SOBIV.ST,SOBIV,,Swedish Orphan Biovitrum AB (publ),SEK,COMMON,SE,true
+SEC_0226,EVOG.ST,EVOG,,Evolution AB (publ),SEK,COMMON,SE,true
+SEC_0227,BA.N,BA,,Boeing Co,USD,COMMON,US,true
+SEC_0228,WDC.OQ,WDC,,Western Digital Corp,USD,COMMON,US,true
+SEC_0229,BOL.ST,BOL,,Boliden AB (publ),SEK,COMMON,SE,true
+SEC_0230,IBKR.OQ,IBKR,,Interactive Brokers Group Inc,USD,COMMON,US,true
+SEC_0231,AIRG.DE,AIRG,,Airbus SE,EUR,COMMON,DE,true
+SEC_0232,UBER.N,UBER,,"Uber Technologies, Inc.",USD,COMMON,US,true
+SEC_0233,PFE.N,PFE,,Pfizer Inc.,USD,COMMON,US,true
+SEC_0234,COP.N,COP,,ConocoPhillips,USD,COMMON,US,true
+SEC_0235,ETN.N,ETN,,Eaton Corporation PLC,USD,COMMON,US,true
+SEC_0236,BKNG.OQ,BKNG,,Booking Holdings Inc.,USD,COMMON,US,true
+SEC_0237,DHR.N,DHR,,Danaher Corporation,USD,COMMON,US,true
+SEC_0238,NOW.N,NOW,,"ServiceNow, Inc.",USD,COMMON,US,true
+SEC_0239,TJX.N,TJX,,"The TJX Companies, Inc.",USD,COMMON,US,true
+SEC_0240,SAF.PA,SAF,,Safran SA,EUR,COMMON,FR,true
+SEC_0241,GJFG.OL,GJFG,,Gjensidige Forsikring ASA,NOK,COMMON,NO,true
+SEC_0242,PKO.WA,PKO,,Powszechna Kasa Oszczednosci Bank Polski SA,PLN,COMMON,PL,true
+SEC_0243,VRTX.OQ,VRTX,,Vertex Pharmaceuticals Incorporated,USD,COMMON,US,true
+SEC_0244,LIFCOb.ST,LIFCOB,,Lifco AB (publ),SEK,COMMON,SE,true
+SEC_0245,BMY.N,BMY,,Bristol-Myers Squibb Company,USD,COMMON,US,true
+SEC_0246,GMAB.CO,GMAB,,Genmab A/S,DKK,COMMON,DK,true
+SEC_0247,NEM.N,NEM,,Newmont Corporation,USD,COMMON,US,true
+SEC_0248,PLD.N,PLD,,"Prologis, Inc.",USD,COMMON,US,true
+SEC_0249,COF.N,COF,,Capital One Financial Corp,USD,COMMON,US,true
+SEC_0250,ISRG.OQ,ISRG,,"Intuitive Surgical, Inc.",USD,COMMON,US,true
+SEC_0251,CB.N,CB,,Chubb Limited,USD,COMMON,US,true
+SEC_0252,SPGI.N,SPGI,,S&P Global Inc,USD,COMMON,US,true
+SEC_0253,LMT.N,LMT,,Lockheed Martin Corp,USD,COMMON,US,true
+SEC_0254,ENR1n.DE,ENR1N,,Siemens Energy AG,EUR,COMMON,DE,true
+SEC_0255,GLW.N,GLW,,Corning Incorporated,USD,COMMON,US,true
+SEC_0256,RR.L,RR,,Rolls-Royce Holdings PLC,GBP,COMMON,GB,true
+SEC_0257,SKFb.ST,SKFB,,SKF AB,SEK,COMMON,SE,true
+SEC_0258,PGR.N,PGR,,The Progressive Corporation,USD,COMMON,US,true
+SEC_0259,CARLb.CO,CARLB,,Carlsberg A/S,DKK,COMMON,DK,true
+SEC_0260,SYK.N,SYK,,Stryker Corporation,USD,COMMON,US,true
+SEC_0261,PH.N,PH,,Parker-Hannifin Corp,USD,COMMON,US,true
+SEC_0262,SBUX.OQ,SBUX,,Starbucks Corp,USD,COMMON,US,true
+SEC_0263,ABI.BR,ABI,,Anheuser-Busch Inbev SA,EUR,COMMON,BE,true
+SEC_0264,PDD.OQ,PDD,,PDD Holdings Inc.,USD,COMMON,US,true
+SEC_0265,FTNT.OQ,FTNT,,"Fortinet, Inc.",USD,COMMON,US,true
+SEC_0266,VAR.OL,VAR,,Var Energi ASA,NOK,COMMON,NO,true
+SEC_0267,LATOb.ST,LATOB,,Investment AB Latour,SEK,COMMON,SE,true
+SEC_0268,CVS.N,CVS,,CVS Health Corporation,USD,COMMON,US,true
+SEC_0269,TEL2b.ST,TEL2B,,Tele2 AB (publ),SEK,COMMON,SE,true
+SEC_0270,MDT.N,MDT,,Medtronic PLC,USD,COMMON,US,true
+SEC_0271,LOW.N,LOW,,Lowe's Companies Inc,USD,COMMON,US,true
+SEC_0272,ACN.N,ACN,,Accenture PLC,USD,COMMON,US,true
+SEC_0273,ADBE.OQ,ADBE,,Adobe Inc,USD,COMMON,US,true
+SEC_0274,AKER.OL,AKER,,Aker ASA,NOK,COMMON,NO,true
+SEC_0275,MO.N,MO,,Altria Group Inc,USD,COMMON,US,true
+SEC_0276,ADP.OQ,ADP,,Automatic Data Processing Inc,USD,COMMON,US,true
+SEC_0277,YAR.OL,YAR,,Yara International ASA,NOK,COMMON,NO,true
+SEC_0278,ABNB.OQ,ABNB,,"Airbnb, Inc.",USD,COMMON,US,true
+SEC_0279,SKAb.ST,SKAB,,Skanska AB,SEK,COMMON,SE,true
+SEC_0280,BNY.N,BNY,,Bank of New York Mellon Corp,USD,COMMON,US,true
+SEC_0281,MOWI.OL,MOWI,,Mowi ASA,NOK,COMMON,NO,true
+SEC_0282,FCX.N,FCX,,Freeport-McMoRan Inc,USD,COMMON,US,true
+SEC_0283,APP.OQ,APP,,AppLovin Corporation,USD,COMMON,US,true
+SEC_0284,HWM.N,HWM,,Howmet Aerospace Inc.,USD,COMMON,US,true
+SEC_0285,SSABb.ST,SSABB,,SSAB AB (publ),SEK,COMMON,SE,true
+SEC_0286,MCK.N,MCK,,McKesson Corp,USD,COMMON,US,true
+SEC_0287,MPC.N,MPC,,Marathon Petroleum Corporation,USD,COMMON,US,true
+SEC_0288,EQIX.OQ,EQIX,,"Equinix, Inc.",USD,COMMON,US,true
+SEC_0289,CME.OQ,CME,,CME Group Inc.,USD,COMMON,US,true
+SEC_0290,GD.N,GD,,General Dynamics Corp,USD,COMMON,US,true
+SEC_0291,DASH.OQ,DASH,,"DoorDash, Inc.",USD,COMMON,US,true
+SEC_0292,SO.N,SO,,Southern Co,USD,COMMON,US,true
+SEC_0293,VLO.N,VLO,,Valero Energy Corp,USD,COMMON,US,true
+SEC_0294,SUBC.OL,SUBC,,Subsea 7 S.A.,NOK,COMMON,NO,true
+SEC_0295,MELI.OQ,MELI,,"MercadoLibre, Inc.",USD,COMMON,US,true
+SEC_0296,VRT.N,VRT,,Vertiv Holdings Co,USD,COMMON,US,true
+SEC_0297,TT.N,TT,,Trane Technologies PLC,USD,COMMON,US,true
+SEC_0298,CEG.OQ,CEG,,Constellation Energy Corp,USD,COMMON,US,true
+SEC_0299,INTU.OQ,INTU,,Intuit Inc.,USD,COMMON,US,true
+SEC_0300,COLOb.CO,COLOB,,Coloplast A/S,DKK,COMMON,DK,true
+SEC_0301,KKR.N,KKR,,KKR & Co Inc,USD,COMMON,US,true
+SEC_0302,PSX.N,PSX,,Phillips 66,USD,COMMON,US,true
+SEC_0303,USB.N,USB,,U.S. Bancorp,USD,COMMON,US,true
+SEC_0304,PNC.N,PNC,,"The PNC Financial Services Group, Inc.",USD,COMMON,US,true
+SEC_0305,CMCSA.OQ,CMCSA,,Comcast Corporation,USD,COMMON,US,true
+SEC_0306,CSX.OQ,CSX,,CSX Corporation,USD,COMMON,US,true
+SEC_0307,TRYG.CO,TRYG,,Tryg A/S,DKK,COMMON,DK,true
+SEC_0308,ORK.OL,ORK,,Orkla ASA,NOK,COMMON,NO,true
+SEC_0309,DUK.N,DUK,,Duke Energy Corp,USD,COMMON,US,true
+SEC_0310,CDNS.OQ,CDNS,,"Cadence Design Systems, Inc.",USD,COMMON,US,true
+SEC_0311,HOOD.OQ,HOOD,,"Robinhood Markets, Inc.",USD,COMMON,US,true
+SEC_0312,INDT.ST,INDT,,Indutrade AB,SEK,COMMON,SE,true
+SEC_0313,CABK.MC,CABK,,CaixaBank SA,EUR,COMMON,ES,true
+SEC_0314,FRO.OL,FRO,,Frontline PLC,NOK,COMMON,NO,true
+SEC_0315,SAVE.ST,SAVE,,Nordnet AB (publ),SEK,COMMON,SE,true
+SEC_0316,MRSH.N,MRSH,,"Marsh & McLennan Companies, Inc.",USD,COMMON,US,true
+SEC_0317,MNST.OQ,MNST,,Monster Beverage Corporation,USD,COMMON,US,true
+SEC_0318,MAR.OQ,MAR,,"Marriott International, Inc.",USD,COMMON,US,true
+SEC_0319,ICE.N,ICE,,Intercontinental Exchange Inc,USD,COMMON,US,true
+SEC_0320,HCA.N,HCA,,"HCA Healthcare, Inc.",USD,COMMON,US,true
+SEC_0321,WMB.N,WMB,,"The Williams Companies, Inc.",USD,COMMON,US,true
+SEC_0322,LUNDb.ST,LUNDB,,L E Lundbergforetagen AB (publ),SEK,COMMON,SE,true
+SEC_0323,MMM.N,MMM,,3M Company,USD,COMMON,US,true
+SEC_0324,ADDTb.ST,ADDTB,,Addtech AB,SEK,COMMON,SE,true
+SEC_0325,UPS.N,UPS,,United Parcel Service Inc,USD,COMMON,US,true
+SEC_0326,MCO.N,MCO,,Moody's Corporation,USD,COMMON,US,true
+SEC_0327,PWR.N,PWR,,Quanta Services Inc,USD,COMMON,US,true
+SEC_0328,WM.N,WM,,Waste Management Inc,USD,COMMON,US,true
+SEC_0329,TRELb.ST,TRELB,,Trelleborg AB (publ),SEK,COMMON,SE,true
+SEC_0330,STB.OL,STB,,Storebrand ASA,NOK,COMMON,NO,true
+SEC_0331,EMR.N,EMR,,Emerson Electric Co,USD,COMMON,US,true
+SEC_0332,ELV.N,ELV,,Elevance Health Inc,USD,COMMON,US,true
+SEC_0333,DDOG.OQ,DDOG,,Datadog Inc,USD,COMMON,US,true
+SEC_0334,SLB.N,SLB,,SLB N.V.,USD,COMMON,US,true
+SEC_0335,SNPS.OQ,SNPS,,"Synopsys, Inc.",USD,COMMON,US,true
+SEC_0336,PRX.AS,PRX,,Prosus NV,EUR,COMMON,NL,true
+SEC_0337,JCI.N,JCI,,Johnson Controls International PLC,USD,COMMON,US,true
+SEC_0338,SB1NO.OL,SB1NO,,Sparebank 1 Sor-Norge ASA,NOK,COMMON,NO,true
+SEC_0339,SHW.N,SHW,,Sherwin-Williams Co,USD,COMMON,US,true
+SEC_0340,SECUb.ST,SECUB,,Securitas AB,SEK,COMMON,SE,true
+SEC_0341,AMT.N,AMT,,American Tower Corporation,USD,COMMON,US,true
+SEC_0342,REGN.OQ,REGN,,"Regeneron Pharmaceuticals, Inc.",USD,COMMON,US,true
+SEC_0343,CTAS.OQ,CTAS,,Cintas Corporation,USD,COMMON,US,true
+SEC_0344,CVNA.N,CVNA,,Carvana Co,USD,COMMON,US,true
+SEC_0345,SCAb.ST,SCAB,,Svenska Cellulosa Aktiebolaget SCA,SEK,COMMON,SE,true
+SEC_0346,MSI.N,MSI,,Motorola Solutions Inc,USD,COMMON,US,true
+SEC_0347,ECL.N,ECL,,Ecolab Inc.,USD,COMMON,US,true
+SEC_0348,LITE.OQ,LITE,,Lumentum Holdings Inc.,USD,COMMON,US,true
+SEC_0349,ITW.N,ITW,,Illinois Tool Works Inc,USD,COMMON,US,true
+SEC_0350,APO.N,APO,,"Apollo Global Management, Inc.",USD,COMMON,US,true
+SEC_0351,MDLZ.OQ,MDLZ,,Mondelez International Inc,USD,COMMON,US,true
+SEC_0352,SALM.OL,SALM,,SalMar ASA,NOK,COMMON,NO,true
+SEC_0353,NSC.N,NSC,,Norfolk Southern Corp,USD,COMMON,US,true
+SEC_0354,FDX.N,FDX,,FedEx Corp,USD,COMMON,US,true
+SEC_0355,CMI.N,CMI,,Cummins Inc,USD,COMMON,US,true
+SEC_0356,NIBEb.ST,NIBEB,,Nibe Industrier AB (publ),SEK,COMMON,SE,true
+SEC_0357,NOC.N,NOC,,Northrop Grumman Corp,USD,COMMON,US,true
+SEC_0358,TRV.N,TRV,,"The Travelers Companies, Inc.",USD,COMMON,US,true
+SEC_0359,GM.N,GM,,General Motors Co,USD,COMMON,US,true
+SEC_0360,AON.N,AON,,Aon PLC,USD,COMMON,US,true
+SEC_0361,EOG.N,EOG,,"EOG Resources, Inc.",USD,COMMON,US,true
+SEC_0362,RCL.N,RCL,,Royal Caribbean Cruises Ltd.,USD,COMMON,US,true
+SEC_0363,TGT.N,TGT,,Target Corp,USD,COMMON,US,true
+SEC_0364,EBP.WA,EBP,,Erste Bank Polska SA,PLN,COMMON,PL,true
+SEC_0365,CI.N,CI,,The Cigna Group,USD,COMMON,US,true
+SEC_0366,ROST.OQ,ROST,,Ross Stores Inc,USD,COMMON,US,true
+SEC_0367,KGH.WA,KGH,,KGHM Polska Miedz SA,PLN,COMMON,PL,true
+SEC_0368,HLT.N,HLT,,Hilton Worldwide Holdings Inc.,USD,COMMON,US,true
+SEC_0369,CL.N,CL,,Colgate-Palmolive Company,USD,COMMON,US,true
+SEC_0370,WBD.OQ,WBD,,"Warner Bros. Discovery, Inc.",USD,COMMON,US,true
+SEC_0371,ORLY.OQ,ORLY,,"O'Reilly Automotive, Inc.",USD,COMMON,US,true
+SEC_0372,KMI.N,KMI,,"Kinder Morgan, Inc.",USD,COMMON,US,true
+SEC_0373,GLEN.L,GLEN,,Glencore PLC,GBP,COMMON,GB,true
+SEC_0374,SPG.N,SPG,,Simon Property Group Inc,USD,COMMON,US,true
+SEC_0375,HPE.N,HPE,,Hewlett Packard Enterprise Company,USD,COMMON,US,true
+SEC_0376,HON.OQ,HON,,Honeywell International Inc.,USD,COMMON,US,true
+SEC_0377,DLR.N,DLR,,"Digital Realty Trust, Inc.",USD,COMMON,US,true
+SEC_0378,APD.N,APD,,"Air Products and Chemicals, Inc.",USD,COMMON,US,true
+SEC_0379,AJG.N,AJG,,Arthur J. Gallagher & Co.,USD,COMMON,US,true
+SEC_0380,GASI.MI,GASI,,Assicurazioni Generali SpA,EUR,COMMON,IT,true
+SEC_0381,RSG.N,RSG,,Republic Services Inc,USD,COMMON,US,true
+SEC_0382,BSX.N,BSX,,Boston Scientific Corp,USD,COMMON,US,true
+SEC_0383,PEO.WA,PEO,,Bank Polska Kasa Opieki SA,PLN,COMMON,PL,true
+SEC_0384,SGEF.PA,SGEF,,Vinci SA,EUR,COMMON,FR,true
+SEC_0385,BEIJb.ST,BEIJB,,Beijer Ref AB (publ),SEK,COMMON,SE,true
+SEC_0386,MYCR.ST,MYCR,,Mycronic AB (publ),SEK,COMMON,SE,true
+SEC_0387,AEP.OQ,AEP,,American Electric Power Company Inc,USD,COMMON,US,true
+SEC_0388,PCAR.OQ,PCAR,,Paccar Inc,USD,COMMON,US,true
+SEC_0389,ALL.N,ALL,,Allstate Corp,USD,COMMON,US,true
+SEC_0390,TDG.N,TDG,,TransDigm Group Incorporated,USD,COMMON,US,true
+SEC_0391,DHLn.DE,DHLN,,Deutsche Post AG,EUR,COMMON,DE,true
+SEC_0392,AVANZ.ST,AVANZ,,Avanza Bank Holding AB (publ),SEK,COMMON,SE,true
+SEC_0393,PNDORA.CO,PNDORA,,Pandora A/S,DKK,COMMON,DK,true
+SEC_0394,CAST.ST,CAST,,Castellum AB,SEK,COMMON,SE,true
+SEC_0395,URI.N,URI,,"United Rentals, Inc.",USD,COMMON,US,true
+SEC_0396,PZU.WA,PZU,,PZU SA,PLN,COMMON,PL,true
+SEC_0397,CRH.N,CRH,,CRH PLC,USD,COMMON,US,true
+SEC_0398,JYSK.CO,JYSK,,Jyske Bank A/S,DKK,COMMON,DK,true
+SEC_0399,SAGAb.ST,SAGAB,,Sagax AB,SEK,COMMON,SE,true
+SEC_0400,GETIb.ST,GETIB,,Getinge publ AB,SEK,COMMON,SE,true
+SEC_0401,BKR.OQ,BKR,,Baker Hughes Company,USD,COMMON,US,true
+SEC_0402,MPWR.OQ,MPWR,,Monolithic Power Systems Inc,USD,COMMON,US,true
+SEC_0403,TRGP.N,TRGP,,Targa Resources Corp.,USD,COMMON,US,true
+SEC_0404,TFC.N,TFC,,Truist Financial Corporation,USD,COMMON,US,true
+SEC_0405,BAES.L,BAES,,BAE Systems PLC,GBP,COMMON,GB,true
+SEC_0406,GWW.N,GWW,,WW Grainger Inc,USD,COMMON,US,true
+SEC_0407,COR.N,COR,,"Cencora, Inc.",USD,COMMON,US,true
+SEC_0408,MET.N,MET,,"MetLife, Inc.",USD,COMMON,US,true
+SEC_0409,DEMANT.CO,DEMANT,,Demant A/S,DKK,COMMON,DK,true
+SEC_0410,BALDb.ST,BALDB,,Fastighets AB Balder,SEK,COMMON,SE,true
+SEC_0411,NDAFI.HE,NDAFI,,Nordea Bank Abp,EUR,COMMON,FI,true
+SEC_0412,OKE.N,OKE,,"ONEOK, Inc.",USD,COMMON,US,true
+SEC_0413,OXY.N,OXY,,Occidental Petroleum Corp,USD,COMMON,US,true
+SEC_0414,NKE.N,NKE,,"NIKE, Inc.",USD,COMMON,US,true
+SEC_0415,TEL.N,TEL2,,TE Connectivity PLC,USD,COMMON,US,true
+SEC_0416,O.N,O,,Realty Income Corporation,USD,COMMON,US,true
+SEC_0417,PSA.N,PSA,,Public Storage,USD,COMMON,US,true
+SEC_0418,AFL.N,AFL,,Aflac Incorporated,USD,COMMON,US,true
+SEC_0419,INGP.WA,INGP,,ING Bank Slaski SA,PLN,COMMON,PL,true
+SEC_0420,MBK.WA,MBK,,mBank SA,PLN,COMMON,PL,true
+SEC_0421,ALSYDB.CO,ALSYDB,,AL Sydbank A/S,DKK,COMMON,DK,true
+SEC_0422,D.N,D,,"Dominion Energy, Inc.",USD,COMMON,US,true
+SEC_0423,FAST.OQ,FAST,,Fastenal Company,USD,COMMON,US,true
+SEC_0424,NBIS.OQ,NBIS,,Nebius Group NV,USD,COMMON,US,true
+SEC_0425,NUE.N,NUE,,Nucor Corporation,USD,COMMON,US,true
+SEC_0426,NXPI.OQ,NXPI,,NXP Semiconductors NV,USD,COMMON,US,true
+SEC_0427,ARGX.BR,ARGX,,argenx SE,EUR,COMMON,BE,true
+SEC_0428,CAGR.PA,CAGR,,Credit Agricole SA,EUR,COMMON,FR,true
+SEC_0429,CTVA.N,CTVA,,"Corteva, Inc.",USD,COMMON,US,true
+SEC_0430,KBC.BR,KBC,,Kbc Groep NV,EUR,COMMON,BE,true
+SEC_0431,NDAQ.OQ,NDAQ,,Nasdaq Inc,USD,COMMON,US,true
+SEC_0432,TER.OQ,TER,,"Teradyne, Inc.",USD,COMMON,US,true
+SEC_0433,FANG.OQ,FANG,,"Diamondback Energy, Inc.",USD,COMMON,US,true
+SEC_0434,F.N,F,,Ford Motor Co,USD,COMMON,US,true
+SEC_0435,SRE.N,SRE,,Sempra,USD,COMMON,US,true
+SEC_0436,MRNA.OQ,MRNA,,"Moderna, Inc.",USD,COMMON,US,true
+SEC_0437,VEND.OL,VEND,,Vend Marketplaces ASA,NOK,COMMON,NO,true
+SEC_0438,GRMN.N,GRMN,,Garmin Ltd.,USD,COMMON,US,true
+SEC_0439,ADSK.OQ,ADSK,,"Autodesk, Inc.",USD,COMMON,US,true
+SEC_0440,COHR.N,COHR,,Coherent Corp.,USD,COMMON,US,true
+SEC_0441,SOGN.PA,SOGN,,Societe Generale SA,EUR,COMMON,FR,true
+SEC_0442,CAH.N,CAH,,"Cardinal Health, Inc.",USD,COMMON,US,true
+SEC_0443,KEYS.N,KEYS,,"Keysight Technologies, Inc.",USD,COMMON,US,true
+SEC_0444,NWG.L,NWG,,NatWest Group PLC,GBP,COMMON,GB,true
+SEC_0445,DB1Gn.DE,DB1GN,,Deutsche Boerse AG,EUR,COMMON,DE,true
+SEC_0446,AME.N,AME,,AMETEK Inc,USD,COMMON,US,true
+SEC_0447,RHMG.DE,RHMG,,Rheinmetall AG,EUR,COMMON,DE,true
+SEC_0448,AXFO.ST,AXFO,,Axfood AB,SEK,COMMON,SE,true
+SEC_0449,CIEN.N,CIEN,,Ciena Corporation,USD,COMMON,US,true
+SEC_0450,FIX.N,FIX,,"Comfort Systems USA, Inc.",USD,COMMON,US,true
+SEC_0451,STT.N,STT,,State Street Corporation,USD,COMMON,US,true
+SEC_0452,SECTb.ST,SECTB,,Sectra AB,SEK,COMMON,SE,true
+SEC_0453,DAL.N,DAL,,"Delta Air Lines, Inc.",USD,COMMON,US,true
+SEC_0454,AAK.ST,AAK,,AAK AB (publ),SEK,COMMON,SE,true
+SEC_0455,DVN.N,DVN,,Devon Energy Corporation,USD,COMMON,US,true
+SEC_0456,EW.N,EW,,Edwards Lifesciences Corporation,USD,COMMON,US,true
+SEC_0457,BDX.N,BDX,,Becton Dickinson and Co,USD,COMMON,US,true
+SEC_0458,HONA.OQ,HONA,,Honeywell Aerospace Inc,USD,COMMON,US,true
+SEC_0459,OCTVsdb.ST,OCTVSDB,,Octave Intelligence PLC,SEK,COMMON,SE,true
+SEC_0460,ERST.VI,ERST,,Erste Group Bank AG,EUR,COMMON,AT,true
+SEC_0461,VMRK.N,VMRK,,Vivmark Residential,USD,COMMON,US,true
+SEC_0462,TCFP.PA,TCFP,,Thales SA,EUR,COMMON,FR,true
+SEC_0463,HOLMb.ST,HOLMB,,Holmen AB,SEK,COMMON,SE,true
+SEC_0464,AAL.L,AAL,,Anglo American PLC,GBP,COMMON,GB,true
+SEC_0465,KMAR.OL,KMAR,,Kongsberg Maritime ASA,NOK,COMMON,NO,true
+SEC_0466,ALAB.OQ,ALAB,,"Astera Labs, Inc.",USD,COMMON,US,true
+SEC_0467,XYZ.N,XYZ,,"Block, Inc.",USD,COMMON,US,true
+SEC_0468,NKT.CO,NKT,,Nkt A/S,DKK,COMMON,DK,true
+SEC_0469,MSTR.OQ,MSTR,,Strategy Inc,USD,COMMON,US,true
+SEC_0470,FITB.N,FITB,,Fifth Third Bancorp,USD,COMMON,US,true
+SEC_0471,AMP.N,AMP,,Ameriprise Financial Inc,USD,COMMON,US,true
+SEC_0472,WAB.N,WAB,,Westinghouse Air Brake Technologies Corp,USD,COMMON,US,true
+SEC_0473,ETR.N,ETR,,Entergy Corp,USD,COMMON,US,true
+SEC_0474,WDAY.OQ,WDAY,,"Workday, Inc.",USD,COMMON,US,true
+SEC_0475,LHX.N,LHX,,"L3Harris Technologies, Inc.",USD,COMMON,US,true
+SEC_0476,AXON.OQ,AXON,,"Axon Enterprise, Inc.",USD,COMMON,US,true
+SEC_0477,CARR.N,CARR,,Carrier Global Corporation,USD,COMMON,US,true
+SEC_0478,AZO.N,AZO,,"AutoZone, Inc.",USD,COMMON,US,true
+SEC_0479,CCEP.OQ,CCEP,,Coca-Cola Europacific Partners PLC,USD,COMMON,US,true
+SEC_0480,CMG.N,CMG,,"Chipotle Mexican Grill, Inc.",USD,COMMON,US,true
+SEC_0481,ROK.N,ROK,,Rockwell Automation Inc,USD,COMMON,US,true
+SEC_0482,XEL.OQ,XEL,,Xcel Energy Inc,USD,COMMON,US,true
+SEC_0483,SWECb.ST,SWECB,,Sweco AB (publ),SEK,COMMON,SE,true
+SEC_0484,STAN.L,STAN,,Standard Chartered PLC,GBP,COMMON,GB,true
+SEC_0485,COIN.OQ,COIN,,Coinbase Global Inc,USD,COMMON,US,true
+SEC_0486,EONGn.DE,EONGN,,E.ON SE,EUR,COMMON,DE,true
+SEC_0487,VTR.N,VTR,,"Ventas, Inc.",USD,COMMON,US,true
+SEC_0488,ARES.N,ARES,,Ares Management Corporation,USD,COMMON,US,true
+SEC_0489,EBAY.OQ,EBAY,,eBay Inc.,USD,COMMON,US,true
+SEC_0490,ISS.CO,ISS,,ISS A/S,DKK,COMMON,DK,true
+SEC_0491,ALEP.WA,ALEP,,Allegro.eu SA,PLN,COMMON,PL,true
+SEC_0492,CRWV.OQ,CRWV,,"CoreWeave, Inc.",USD,COMMON,US,true
+SEC_0493,HUM.N,HUM,,Humana Inc.,USD,COMMON,US,true
+SEC_0494,RWEG.DE,RWEG,,RWE AG,EUR,COMMON,DE,true
+SEC_0495,VST.N,VST,,Vistra Corp.,USD,COMMON,US,true
+SEC_0496,TRI.OQ,TRI,,Thomson Reuters Corp,USD,COMMON,US,true
+SEC_0497,LAGRb.ST,LAGRB,,Lagercrantz Group AB,SEK,COMMON,SE,true
+SEC_0498,PYPL.OQ,PYPL,,"PayPal Holdings, Inc.",USD,COMMON,US,true
+SEC_0499,EXC.OQ,EXC,,Exelon Corp,USD,COMMON,US,true
+SEC_0500,PAYX.OQ,PAYX,,"Paychex, Inc.",USD,COMMON,US,true
+SEC_0501,VEEV.N,VEEV,,Veeva Systems Inc.,USD,COMMON,US,true
+SEC_0502,ROCKb.CO,ROCKB,,Rockwool A/S,DKK,COMMON,DK,true
+SEC_0503,SHLG.DE,SHLG,,Siemens Healthineers AG,EUR,COMMON,DE,true
+SEC_0504,ELE.MC,ELE,,Endesa SA,EUR,COMMON,ES,true
+SEC_0505,DANO.PA,DANO,,Danone SA,EUR,COMMON,FR,true
+SEC_0506,FERG.N,FERG,,Ferguson Enterprises Inc,USD,COMMON,US,true
+SEC_0507,TTWO.OQ,TTWO,,"Take-Two Interactive Software, Inc.",USD,COMMON,US,true
+SEC_0508,LSEG.L,LSEG,,London Stock Exchange Group PLC,GBP,COMMON,GB,true
+SEC_0509,RILBA.CO,RILBA,,Ringkjoebing Landbobank A/S,DKK,COMMON,DK,true
+SEC_0510,KDP.OQ,KDP,,Keurig Dr Pepper Inc,USD,COMMON,US,true
+SEC_0511,CBKG.DE,CBKG,,Commerzbank AG,EUR,COMMON,DE,true
+SEC_0512,IDXX.OQ,IDXX,,"IDEXX Laboratories, Inc.",USD,COMMON,US,true
+SEC_0513,CBRE.N,CBRE,,"CBRE Group, Inc.",USD,COMMON,US,true
+SEC_0514,A.N,A,,Agilent Technologies Inc,USD,COMMON,US,true
+SEC_0515,FER.OQ,FER,,Ferrovial N.V.,USD,COMMON,US,true
+SEC_0516,IQV.N,IQV,,IQVIA Holdings Inc.,USD,COMMON,US,true
+SEC_0517,ALKb.CO,ALKB,,ALK-Abello A/S,DKK,COMMON,DK,true
+SEC_0518,UCB.BR,UCB,,Ucb SA,EUR,COMMON,BE,true
+SEC_0519,LYV.N,LYV,,"Live Nation Entertainment, Inc.",USD,COMMON,US,true
+SEC_0520,ROP.OQ,ROP,,"Roper Technologies, Inc.",USD,COMMON,US,true
+SEC_0521,YUM.N,YUM,,"Yum! Brands, Inc.",USD,COMMON,US,true
+SEC_0522,HOLN.S,HOLN,,Holcim AG,CHF,COMMON,CH,true
+SEC_0523,MSCI.N,MSCI,,MSCI Inc,USD,COMMON,US,true
+SEC_0524,PRU.N,PRU2,,Prudential Financial Inc,USD,COMMON,US,true
+SEC_0525,DHI.N,DHI,,"D.R. Horton, Inc.",USD,COMMON,US,true
+SEC_0526,ODFL.OQ,ODFL,,"Old Dominion Freight Line, Inc.",USD,COMMON,US,true
+SEC_0527,HEIN.AS,HEIN,,Heineken NV,EUR,COMMON,NL,true
+SEC_0528,ASMI.AS,ASMI,,ASM International NV,EUR,COMMON,NL,true
+SEC_0529,GALD.S,GALD,,Galderma Group AG,CHF,COMMON,CH,true
+SEC_0530,FLEX.OQ,FLEX,,Flex Ltd,USD,COMMON,US,true
+SEC_0531,WAT.N,WAT,,Waters Corp,USD,COMMON,US,true
+SEC_0532,AIG.N,AIG,,"American International Group, Inc.",USD,COMMON,US,true
+SEC_0533,ANTO.L,ANTO,,Antofagasta PLC,GBP,COMMON,GB,true
+SEC_0534,ED.N,ED,,"Consolidated Edison, Inc.",USD,COMMON,US,true
+SEC_0535,STMMI.MI,STMMI,,STMicroelectronics N.V.,EUR,COMMON,IT,true
+SEC_0536,SGOB.PA,SGOB,,Compagnie de Saint Gobain SA,EUR,COMMON,FR,true
+SEC_0537,AENA.MC,AENA,,Aena SME SA,EUR,COMMON,ES,true
+SEC_0538,MCHP.OQ,MCHP,,Microchip Technology Inc,USD,COMMON,US,true
+SEC_0539,EXPE.OQ,EXPE,,"Expedia Group, Inc.",USD,COMMON,US,true
+SEC_0540,LPPP.WA,LPPP,,Lpp SA,PLN,COMMON,PL,true
+SEC_0541,ADM.N,ADM,,Archer-Daniels-Midland Co,USD,COMMON,US,true
+SEC_0542,SYY.N,SYY,,Sysco Corporation,USD,COMMON,US,true
+SEC_0543,RKLB.OQ,RKLB,,Rocket Lab Corp,USD,COMMON,US,true
+SEC_0544,MLM.N,MLM,,"Martin Marietta Materials, Inc.",USD,COMMON,US,true
+SEC_0545,HIG.N,HIG,,"The Hartford Insurance Group, Inc.",USD,COMMON,US,true
+SEC_0546,EL.N,EL,,Estee Lauder Companies Inc,USD,COMMON,US,true
+SEC_0547,FER.MC,FER2,,Ferrovial N.V.,EUR,COMMON,ES,true
+SEC_0548,LEGD.PA,LEGD,,Legrand SA,EUR,COMMON,FR,true
+SEC_0549,KVUE.N,KVUE,,Kenvue Inc.,USD,COMMON,US,true
+SEC_0550,NTAP.OQ,NTAP,,NetApp Inc,USD,COMMON,US,true
+SEC_0551,PCG.N,PCG,,PG&E Corp,USD,COMMON,US,true
+SEC_0552,PST.MI,PST,,Poste Italiane SpA,EUR,COMMON,IT,true
+SEC_0553,PEG.N,PEG,,Public Service Enterprise Group Incorporated,USD,COMMON,US,true
+SEC_0554,KMB.OQ,KMB,,Kimberly-Clark Corporation,USD,COMMON,US,true
+SEC_0555,LOOMIS.ST,LOOMIS,,Loomis AB,SEK,COMMON,SE,true
+SEC_0556,HSY.N,HSY,,The Hershey Company,USD,COMMON,US,true
+SEC_0557,SBNOR.OL,SBNOR,,Sparebanken Norge,NOK,COMMON,NO,true
+SEC_0558,UAL.OQ,UAL,,"United Airlines Holdings, Inc.",USD,COMMON,US,true
+SEC_0559,DTGGe.DE,DTGGE,,Daimler Truck Holding AG,EUR,COMMON,DE,true
+SEC_0560,CCEPC.L,CCEPC,,Coca-Cola Europacific Partners PLC,GBP,COMMON,GB,true
+SEC_0561,VMC.N,VMC,,Vulcan Materials Co,USD,COMMON,US,true
+SEC_0562,KR.N,KR,,Kroger Co,USD,COMMON,US,true
+SEC_0563,DNP.WA,DNP,,Dino Polska S.A.,PLN,COMMON,PL,true
+SEC_0564,IRM.N,IRM,,Iron Mountain Inc,USD,COMMON,US,true
+SEC_0565,TKO.N,TKO,,TKO Group Holdings Inc,USD,COMMON,US,true
+SEC_0566,BMPS.MI,BMPS,,Banca Monte dei Paschi di Siena SpA,EUR,COMMON,IT,true
+SEC_0567,ADYEN.AS,ADYEN,,Adyen N.V.,EUR,COMMON,NL,true
+SEC_0568,RMD.N,RMD,,ResMed Inc.,USD,COMMON,US,true
+SEC_0569,WEC.N,WEC,,"WEC Energy Group, Inc.",USD,COMMON,US,true
+SEC_0570,FLS.CO,FLS,,FLSmidth & Co. A/S,DKK,COMMON,DK,true
+SEC_0571,RJF.N,RJF,,"Raymond James Financial, Inc.",USD,COMMON,US,true
+SEC_0572,DXCM.OQ,DXCM,,Dexcom Inc,USD,COMMON,US,true
+SEC_0573,MTB.N,MTB,,M&T Bank Corporation,USD,COMMON,US,true
+SEC_0574,HBAN.OQ,HBAN,,Huntington Bancshares Inc,USD,COMMON,US,true
+SEC_0575,NTRS.OQ,NTRS,,Northern Trust Corporation,USD,COMMON,US,true
+SEC_0576,EQT.N,EQT,,EQT Corporation,USD,COMMON,US,true
+SEC_0577,CCL.N,CCL,,Carnival Corporation Ltd,USD,COMMON,US,true
+SEC_0578,ACGL.OQ,ACGL,,Arch Capital Group Ltd.,USD,COMMON,US,true
+SEC_0579,STLD.OQ,STLD,,Steel Dynamics Inc,USD,COMMON,US,true
+SEC_0580,NOD.OL,NOD,,Nordic Semiconductor ASA,NOK,COMMON,NO,true
+SEC_0581,HOTG.DE,HOTG,,Hochtief AG,EUR,COMMON,DE,true
+SEC_0582,SCMN.S,SCMN,,Swisscom AG,CHF,COMMON,CH,true
+SEC_0583,RKT.L,RKT,,Reckitt Benckiser Group PLC,GBP,COMMON,GB,true
+SEC_0584,TOM.OL,TOM,,Tomra Systems ASA,NOK,COMMON,NO,true
+SEC_0585,EME.N,EME,,"EMCOR Group, Inc.",USD,COMMON,US,true
+SEC_0586,HLN.L,HLN,,Haleon PLC,GBP,COMMON,GB,true
+SEC_0587,CBOE.Z,CBOE,,"Cboe Global Markets, Inc.",USD,COMMON,US,true
+SEC_0588,GEHC.OQ,GEHC,,GE HealthCare Technologies Inc.,USD,COMMON,US,true
+SEC_0589,CCI.N,CCI,,Crown Castle Inc,USD,COMMON,US,true
+SEC_0590,TLXGn.DE,TLXGN,,Talanx AG,EUR,COMMON,DE,true
+SEC_0591,BIIB.OQ,BIIB,,Biogen Inc.,USD,COMMON,US,true
+SEC_0592,CNC.N,CNC,,Centene Corp,USD,COMMON,US,true
+SEC_0593,ZTS.N,ZTS,,Zoetis Inc,USD,COMMON,US,true
+SEC_0594,WTW.OQ,WTW,,Willis Towers Watson Public Limited Company,USD,COMMON,US,true
+SEC_0595,ZAB.WA,ZAB,,Zabka Group SA,PLN,COMMON,PL,true
+SEC_0596,HNKG_p.DE,HNKGP,,Henkel AG & Co. KGaA,EUR,COMMON,DE,true
+SEC_0597,ALNY.OQ,ALNY,,"Alnylam Pharmaceuticals, Inc.",USD,COMMON,US,true
+SEC_0598,JBL.N,JBL,,Jabil Inc.,USD,COMMON,US,true
+SEC_0599,PRTP.PA,PRTP,,Kering SA,EUR,COMMON,FR,true
+SEC_0600,SIKA.S,SIKA,,Sika AG,CHF,COMMON,CH,true
+SEC_0601,HNRGn.DE,HNRGN,,Hannover Rueck SE,EUR,COMMON,DE,true
+SEC_0602,LDOF.MI,LDOF,,Leonardo S.p.A.,EUR,COMMON,IT,true
+SEC_0603,CPRT.OQ,CPRT,,Copart Inc,USD,COMMON,US,true
+SEC_0604,IR.N,IR,,Ingersoll Rand Inc,USD,COMMON,US,true
+SEC_0605,KHC.OQ,KHC,,The Kraft Heinz Company,USD,COMMON,US,true
+SEC_0606,SDZ.S,SDZ,,Sandoz Group AG,CHF,COMMON,CH,true
+SEC_0607,EXR.N,EXR,,Extra Space Storage Inc.,USD,COMMON,US,true
+SEC_0608,HAL.N,HAL,,Halliburton Company,USD,COMMON,US,true
+SEC_0609,HEIG.DE,HEIG,,Heidelberg Materials AG,EUR,COMMON,DE,true
+SEC_0610,EMII.MI,EMII,,BPER Banca SpA,EUR,COMMON,IT,true
+SEC_0611,SSE.L,SSE,,SSE PLC,GBP,COMMON,GB,true
+SEC_0612,BAKKA.OL,BAKKA,,P/F Bakkafrost,NOK,COMMON,NO,true
+SEC_0613,RDDT.N,RDDT,,"Reddit, Inc.",USD,COMMON,US,true
+SEC_0614,AEE.N,AEE,,Ameren Corporation,USD,COMMON,US,true
+SEC_0615,CFG.N,CFG,,Citizens Financial Group Inc,USD,COMMON,US,true
+SEC_0616,LVS.N,LVS,,Las Vegas Sands Corp.,USD,COMMON,US,true
+SEC_0617,REP.MC,REP,,"Repsol, S.A.",EUR,COMMON,ES,true
+SEC_0618,III.L,III,,3i Group PLC,GBP,COMMON,GB,true
+SEC_0619,ALCC.S,ALCC,,Alcon AG,CHF,COMMON,CH,true
+SEC_0620,NTGY.MC,NTGY,,"Naturgy Energy Group, S.A.",EUR,COMMON,ES,true
+SEC_0621,CTSH.OQ,CTSH,,Cognizant Technology Solutions Corporation,USD,COMMON,US,true
+SEC_0622,TDY.N,TDY,,Teledyne Technologies Inc,USD,COMMON,US,true
+SEC_0623,ACS.MC,ACS,,ACS Actividades de Construccion y Servicios SA,EUR,COMMON,ES,true
+SEC_0624,TSCO.L,TSCO,,Tesco PLC,GBP,COMMON,GB,true
+SEC_0625,VICI.N,VICI,,VICI Properties Inc,USD,COMMON,US,true
+SEC_0626,FISV.OQ,FISV,,Fiserv Inc,USD,COMMON,US,true
+SEC_0627,DTE.N,DTE2,,DTE Energy Company,USD,COMMON,US,true
+SEC_0628,ON.OQ,ON,,ON Semiconductor Corp,USD,COMMON,US,true
+SEC_0629,ATO.N,ATO,,Atmos Energy Corporation,USD,COMMON,US,true
+SEC_0630,MTD.N,MTD,,Mettler-Toledo International Inc.,USD,COMMON,US,true
+SEC_0631,SCHP.S,SCHP,,Schindler Holding AG,CHF,COMMON,CH,true
+SEC_0632,CASY.OQ,CASY,,Caseys General Stores Inc,USD,COMMON,US,true
+SEC_0633,WSM.N,WSM,,Williams-Sonoma Inc,USD,COMMON,US,true
+SEC_0634,HPQ.N,HPQ,,HP Inc,USD,COMMON,US,true
+SEC_0635,AWK.N,AWK,,"American Water Works Company, Inc.",USD,COMMON,US,true
+SEC_0636,UMG.AS,UMG,,Universal Music Group N.V.,EUR,COMMON,NL,true
+SEC_0637,OTIS.N,OTIS,,Otis Worldwide Corporation,USD,COMMON,US,true
+SEC_0638,ABNd.AS,ABND,,ABN Amro Bank NV,EUR,COMMON,NL,true
+SEC_0639,LH.N,LH,,Labcorp Holdings Inc.,USD,COMMON,US,true
+SEC_0640,FOXA.OQ,FOXA,,Fox Corporation,USD,COMMON,US,true
+SEC_0641,FOX.OQ,FOX,,Fox Corporation,USD,COMMON,US,true
+SEC_0642,DG.N,DG,,Dollar General Corp,USD,COMMON,US,true
+SEC_0643,AD.AS,AD,,Koninklijke Ahold Delhaize N.V.,EUR,COMMON,NL,true
+SEC_0644,EIX.N,EIX,,Edison International,USD,COMMON,US,true
+SEC_0645,DGX.N,DGX,,Quest Diagnostics Inc,USD,COMMON,US,true
+SEC_0646,CPAY.N,CPAY,,"Corpay, Inc.",USD,COMMON,US,true
+SEC_0647,DOV.N,DOV,,Dover Corp,USD,COMMON,US,true
+SEC_0648,KNIN.S,KNIN,,Kuehne + Nagel International AG,CHF,COMMON,CH,true
+SEC_0649,ES.N,ES,,Eversource Energy,USD,COMMON,US,true
+SEC_0650,FE.N,FE,,FirstEnergy Corp,USD,COMMON,US,true
+SEC_0651,CINF.OQ,CINF,,Cincinnati Financial Corporation,USD,COMMON,US,true
+SEC_0652,VRSN.OQ,VRSN,,"VeriSign, Inc.",USD,COMMON,US,true
+SEC_0653,XYL.N,XYL,,Xylem Inc,USD,COMMON,US,true
+SEC_0654,SLHN.S,SLHN,,Swiss Life Holding AG,CHF,COMMON,CH,true
+SEC_0655,CNP.N,CNP,,"CenterPoint Energy, Inc.",USD,COMMON,US,true
+SEC_0656,RF.N,RF,,Regions Financial Corporation,USD,COMMON,US,true
+SEC_0657,FREn.DE,FREN,,Fresenius SE & Co. KGaA,EUR,COMMON,DE,true
+SEC_0658,PPL.N,PPL,,PPL Corp,USD,COMMON,US,true
+SEC_0659,MILP.WA,MILP,,Bank Millennium SA,PLN,COMMON,PL,true
+SEC_0660,PRU.L,PRU3,,Prudential PLC,GBP,COMMON,GB,true
+SEC_0661,WRB.N,WRB,,W. R. Berkley Corporation,USD,COMMON,US,true
+SEC_0662,SYF.N,SYF,,Synchrony Financial,USD,COMMON,US,true
+SEC_0663,PPG.N,PPG,,"PPG Industries, Inc.",USD,COMMON,US,true
+SEC_0664,SW.N,SW,,Smurfit WestRock PLC,USD,COMMON,US,true
+SEC_0665,TGS.OL,TGS,,TGS ASA,NOK,COMMON,NO,true
+SEC_0666,AMA.MC,AMA,,"Amadeus IT Group, S.A.",EUR,COMMON,ES,true
+SEC_0667,ECHO.OQ,ECHO,,EchoStar Corporation,USD,COMMON,US,true
+SEC_0668,INCY.OQ,INCY,,Incyte Corp,USD,COMMON,US,true
+SEC_0669,Q.N,Q,,"Qnity Electronics, Inc.",USD,COMMON,US,true
+SEC_0670,TPL.N,TPL,,Texas Pacific Land Corporation,USD,COMMON,US,true
+SEC_0671,TPR.N,TPR,,"Tapestry, Inc.",USD,COMMON,US,true
+SEC_0672,VRSK.OQ,VRSK,,"Verisk Analytics, Inc.",USD,COMMON,US,true
+SEC_0673,FICO.N,FICO,,Fair Isaac Corporation,USD,COMMON,US,true
+SEC_0674,TENR.MI,TENR,,Tenaris SA,EUR,COMMON,IT,true
+SEC_0675,EXPD.N,EXPD,,Expeditors International of Washington Inc,USD,COMMON,US,true
+SEC_0676,RYA.I,RYA,,Ryanair Holdings PLC,EUR,COMMON,IE,true
+SEC_0677,BRO.N,BRO,,Brown & Brown Inc,USD,COMMON,US,true
+SEC_0678,JBHT.OQ,JBHT,,"J.B. Hunt Transport Services, Inc.",USD,COMMON,US,true
+SEC_0679,DRI.N,DRI,,Darden Restaurants Inc,USD,COMMON,US,true
+SEC_0680,WIHL.ST,WIHL,,Wihlborgs Fastigheter AB,SEK,COMMON,SE,true
+SEC_0681,BAMI.MI,BAMI,,Banco BPM SpA,EUR,COMMON,IT,true
+SEC_0682,DSFIR.AS,DSFIR,,DSM-Firmenich AG,EUR,COMMON,NL,true
+SEC_0683,GPN.N,GPN,,Global Payments Inc,USD,COMMON,US,true
+SEC_0684,HUBB.N,HUBB,,Hubbell Inc,USD,COMMON,US,true
+SEC_0685,OMC.N,OMC,,Omnicom Group Inc,USD,COMMON,US,true
+SEC_0686,IHG.L,IHG,,InterContinental Hotels Group PLC,GBP,COMMON,GB,true
+SEC_0687,PHM.N,PHM,,"PulteGroup, Inc.",USD,COMMON,US,true
+SEC_0688,DLTR.OQ,DLTR,,Dollar Tree Inc,USD,COMMON,US,true
+SEC_0689,MICP.PA,MICP,,Compagnie Generale des Etablissements Michelin SCA,EUR,COMMON,FR,true
+SEC_0690,VLTO.N,VLTO,,Veralto Corp,USD,COMMON,US,true
+SEC_0691,CHD.N,CHD,,Church & Dwight Co Inc,USD,COMMON,US,true
+SEC_0692,SMCI.OQ,SMCI,,Super Micro Computer Inc,USD,COMMON,US,true
+SEC_0693,PFG.OQ,PFG,,Principal Financial Group Inc,USD,COMMON,US,true
+SEC_0694,KNEBV.HE,KNEBV,,KONE Oyj,EUR,COMMON,FI,true
+SEC_0695,CDR.WA,CDR,,CD PROJEKT RED S.A.,PLN,COMMON,PL,true
+SEC_0696,WST.N,WST,,"West Pharmaceutical Services, Inc.",USD,COMMON,US,true
+SEC_0697,TROW.OQ,TROW,,"T. Rowe Price Group, Inc.",USD,COMMON,US,true
+SEC_0698,KEY.N,KEY,,KeyCorp,USD,COMMON,US,true
+SEC_0699,FRES.L,FRES,,Fresnillo PLC,GBP,COMMON,GB,true
+SEC_0700,NRG.N,NRG,,NRG Energy Inc,USD,COMMON,US,true
+SEC_0701,EFX.N,EFX,,Equifax Inc.,USD,COMMON,US,true
+SEC_0702,PHG.AS,PHG,,Koninklijke Philips N.V.,EUR,COMMON,NL,true
+SEC_0703,STE.N,STE,,STERIS plc,USD,COMMON,US,true
+SEC_0704,EXE.OQ,EXE,,Expand Energy Corporation,USD,COMMON,US,true
+SEC_0705,AIBG.I,AIBG,,AIB Group PLC,EUR,COMMON,IE,true
+SEC_0706,AM.PA,AM,,Dassault Aviation SA,EUR,COMMON,FR,true
+SEC_0707,ZELA.CO,ZELA,,Zealand Pharma A/S,DKK,COMMON,DK,true
+SEC_0708,IFF.N,IFF,,International Flavors & Fragrances Inc.,USD,COMMON,US,true
+SEC_0709,L.N,L,,Loews Corporation,USD,COMMON,US,true
+SEC_0710,FFIV.OQ,FFIV,,"F5, Inc.",USD,COMMON,US,true
+SEC_0711,STZ.N,STZ,,"Constellation Brands, Inc.",USD,COMMON,US,true
+SEC_0712,THULE.ST,THULE,,Thule Group AB,SEK,COMMON,SE,true
+SEC_0713,GIS.N,GIS,,General Mills Inc,USD,COMMON,US,true
+SEC_0714,BG.N,BG,,Bunge Global SA,USD,COMMON,US,true
+SEC_0715,ULTA.OQ,ULTA,,Ulta Beauty Inc,USD,COMMON,US,true
+SEC_0716,DOW.N,DOW,,Dow Inc.,USD,COMMON,US,true
+SEC_0717,OMVV.VI,OMVV,,OMV Aktiengesellschaft,EUR,COMMON,AT,true
+SEC_0718,AV.L,AV,,Aviva PLC,GBP,COMMON,GB,true
+SEC_0719,FSLR.OQ,FSLR,,"First Solar, Inc.",USD,COMMON,US,true
+SEC_0720,AMCR.N,AMCR,,Amcor PLC,USD,COMMON,US,true
+SEC_0721,PKG.N,PKG,,Packaging Corp of America,USD,COMMON,US,true
+SEC_0722,CMS.N,CMS,,CMS Energy Corporation,USD,COMMON,US,true
+SEC_0723,RBREW.CO,RBREW,,Royal Unibrew A/S,DKK,COMMON,DK,true
+SEC_0724,FIS.N,FIS,,Fidelity National Information Services Inc,USD,COMMON,US,true
+SEC_0725,HBANC.S,HBANC,,Helvetia Baloise Holding AG,CHF,COMMON,CH,true
+SEC_0726,RL.N,RL,,Ralph Lauren Corporation,USD,COMMON,US,true
+SEC_0727,BR.N,BR,,Broadridge Financial Solutions Inc,USD,COMMON,US,true
+SEC_0728,P911_p.DE,P911P,,Dr Ing hc F Porsche AG,EUR,COMMON,DE,true
+SEC_0729,IP.N,IP,,International Paper Co,USD,COMMON,US,true
+SEC_0730,LEN.N,LEN,,Lennar Corporation,USD,COMMON,US,true
+SEC_0731,RBIV.VI,RBIV,,Raiffeisen Bank International AG,EUR,COMMON,AT,true
+SEC_0732,TEF.MC,TEF,,Telefonica SA,EUR,COMMON,ES,true
+SEC_0733,NN.AS,NN,,NN Group N.V.,EUR,COMMON,NL,true
+SEC_0734,LYB.N,LYB,,LyondellBasell Industries N.V.,USD,COMMON,US,true
+SEC_0735,BT.L,BT,,BT Group PLC,GBP,COMMON,GB,true
+SEC_0736,UNPI.MI,UNPI,,Unipol Assicurazioni S.p.A.,EUR,COMMON,IT,true
+SEC_0737,LISP.S,LISP,,Chocoladefabriken Lindt & Spruengli AG,CHF,COMMON,CH,true
+SEC_0738,SNA.N,SNA,,Snap-On Inc,USD,COMMON,US,true
+SEC_0739,SBAC.OQ,SBAC,,SBA Communications Corp,USD,COMMON,US,true
+SEC_0740,PGHN.S,PGHN,,Partners Group Holding AG,CHF,COMMON,CH,true
+SEC_0741,FDXF.N,FDXF,,FedEx Freight Holding Company Inc,USD,COMMON,US,true
+SEC_0742,TRN.MI,TRN,,Terna Rete Elettrica Nazionale SpA,EUR,COMMON,IT,true
+SEC_0743,GEBN.S,GEBN,,Geberit AG,CHF,COMMON,CH,true
+SEC_0744,AMUN.PA,AMUN,,Amundi SA,EUR,COMMON,FR,true
+SEC_0745,ACPP.WA,ACPP,,Asseco Poland SA,PLN,COMMON,PL,true
+SEC_0746,SRG.MI,SRG,,Snam SpA,EUR,COMMON,IT,true
+SEC_0747,TSN.N,TSN,,Tyson Foods Inc,USD,COMMON,US,true
+SEC_0748,NI.N,NI,,NiSource Inc.,USD,COMMON,US,true
+SEC_0749,LUV.N,LUV,,Southwest Airlines Co,USD,COMMON,US,true
+SEC_0750,BEIG.DE,BEIG,,Beiersdorf AG,EUR,COMMON,DE,true
+SEC_0751,MTXGn.DE,MTXGN,,MTU Aero Engines AG,EUR,COMMON,DE,true
+SEC_0752,STDM.PA,STDM,,Sartorius Stedim Biotech SA,EUR,COMMON,FR,true
+SEC_0753,ZBH.N,ZBH,,"Zimmer Biomet Holdings, Inc.",USD,COMMON,US,true
+SEC_0754,HEIO.AS,HEIO,,Heineken Holding NV,EUR,COMMON,NL,true
+SEC_0755,ICAG.L,ICAG,,"International Consolidated Airlines Group, S.A.",GBP,COMMON,GB,true
+SEC_0756,CF.N,CF,,CF Industries Holdings Inc,USD,COMMON,US,true
+SEC_0757,GPC.N,GPC,,Genuine Parts Co,USD,COMMON,US,true
+SEC_0758,8TRA.DE,8TRA,,Traton SE,EUR,COMMON,DE,true
+SEC_0759,FORTUM.HE,FORTUM,,Fortum Oyj,EUR,COMMON,FI,true
+SEC_0760,VTRS.OQ,VTRS,,Viatris Inc.,USD,COMMON,US,true
+SEC_0761,CSG.AS,CSG,,CSG NV,EUR,COMMON,NL,true
+SEC_0762,SGSN.S,SGSN,,SGS SA,CHF,COMMON,CH,true
+SEC_0763,NXT.L,NXT,,Next PLC,GBP,COMMON,GB,true
+SEC_0764,EMSN.S,EMSN,,Ems Chemie Holding AG,CHF,COMMON,CH,true
+SEC_0765,EVRG.OQ,EVRG,,"Evergy, Inc.",USD,COMMON,US,true
+SEC_0766,GEN.OQ,GEN,,Gen Digital Inc.,USD,COMMON,US,true
+SEC_0767,KSP.I,KSP,,Kingspan Group PLC,EUR,COMMON,IE,true
+SEC_0768,DD.N,DD,,"DuPont de Nemours, Inc.",USD,COMMON,US,true
+SEC_0769,CDW.OQ,CDW,,CDW Corporation,USD,COMMON,US,true
+SEC_0770,ESS.N,ESS,,"Essex Property Trust, Inc.",USD,COMMON,US,true
+SEC_0771,BFT.WA,BFT,,Benefit Systems S.A.,PLN,COMMON,PL,true
+SEC_0772,MRCG.DE,MRCG,,Merck KGaA,EUR,COMMON,DE,true
+SEC_0773,TPRO.MI,TPRO,,Technoprobe S.p.A.,EUR,COMMON,IT,true
+SEC_0774,BMED.MI,BMED,,Banca Mediolanum S.p.A.,EUR,COMMON,IT,true
+SEC_0775,VACN.S,VACN,,VAT Group AG,CHF,COMMON,CH,true
+SEC_0776,TSCO.OQ,TSCO2,,Tractor Supply Company,USD,COMMON,US,true
+SEC_0777,NDSN.OQ,NDSN,,Nordson Corporation,USD,COMMON,US,true
+SEC_0778,FTV.N,FTV,,Fortive Corporation,USD,COMMON,US,true
+SEC_0779,J.N,J,,Jacobs Solutions Inc,USD,COMMON,US,true
+SEC_0780,BIRG.I,BIRG,,Bank of Ireland Group PLC,EUR,COMMON,IE,true
+SEC_0781,LDOS.N,LDOS,,"Leidos Holdings, Inc.",USD,COMMON,US,true
+SEC_0782,LNT.OQ,LNT,,Alliant Energy Corp,USD,COMMON,US,true
+SEC_0783,BEN.N,BEN,,"Franklin Templeton, Inc.",USD,COMMON,US,true
+SEC_0784,CHTR.OQ,CHTR,,"Charter Communications, Inc.",USD,COMMON,US,true
+SEC_0785,CHRW.OQ,CHRW,,"C.H. Robinson Worldwide, Inc.",USD,COMMON,US,true
+SEC_0786,CLNX.MC,CLNX,,Cellnex Telecom S.a,EUR,COMMON,ES,true
+SEC_0787,ROL.N,ROL,,Rollins Inc,USD,COMMON,US,true
+SEC_0788,NWSA.OQ,NWSA,,News Corporation,USD,COMMON,US,true
+SEC_0789,NWS.OQ,NWS,,News Corporation,USD,COMMON,US,true
+SEC_0790,WRT1V.HE,WRT1V,,Wartsila Oyj Abp,EUR,COMMON,FI,true
+SEC_0791,SABE.MC,SABE,,"Banco de Sabadell, S.A.",EUR,COMMON,ES,true
+SEC_0792,BBY.N,BBY,,"Best Buy Co., Inc.",USD,COMMON,US,true
+SEC_0793,INVH.N,INVH,,Invitation Homes Inc.,USD,COMMON,US,true
+SEC_0794,BOUY.PA,BOUY,,Bouygues SA,EUR,COMMON,FR,true
+SEC_0795,KBX.DE,KBX,,Knorr Bremse AG,EUR,COMMON,DE,true
+SEC_0796,PTC.OQ,PTC,,PTC Inc.,USD,COMMON,US,true
+SEC_0797,NVR.N,NVR,,"NVR, Inc.",USD,COMMON,US,true
+SEC_0798,WY.N,WY,,Weyerhaeuser Company,USD,COMMON,US,true
+SEC_0799,IEX.N,IEX,,IDEX Corporation,USD,COMMON,US,true
+SEC_0800,SATG_p.DE,SATGP,,Sartorius AG,EUR,COMMON,DE,true
+SEC_0801,BALL.N,BALL,,Ball Corp,USD,COMMON,US,true
+SEC_0802,ZBRA.OQ,ZBRA,,Zebra Technologies Corp,USD,COMMON,US,true
+SEC_0803,VNAn.DE,VNAN,,Vonovia SE,EUR,COMMON,DE,true
+SEC_0804,ENX.PA,ENX,,Euronext NV,EUR,COMMON,FR,true
+SEC_0805,BCP.LS,BCP,,"Banco Comercial Portugues, SA",EUR,COMMON,PT,true
+SEC_0806,TLIT.MI,TLIT,,Telecom Italia S.p.A.,EUR,COMMON,IT,true
+SEC_0807,CCH.L,CCH,,Coca-Cola HBC AG,GBP,COMMON,GB,true
+SEC_0808,WLSNc.AS,WLSNC,,Wolters Kluwer N.V.,EUR,COMMON,NL,true
+SEC_0809,ALB.N,ALB,,Albemarle Corp,USD,COMMON,US,true
+SEC_0810,BESI.AS,BESI,,BE Semiconductor Industries NV,EUR,COMMON,NL,true
+SEC_0811,AGES.BR,AGES,,Ageas SA/NV,EUR,COMMON,BE,true
+SEC_0812,PERP.PA,PERP,,Pernod Ricard SA,EUR,COMMON,FR,true
+SEC_0813,KIM.N,KIM,,Kimco Realty Corp,USD,COMMON,US,true
+SEC_0814,SMT.L,SMT,,Scottish Mortgage Investment Trust PLC,GBP,COMMON,GB,true
+SEC_0815,KPN.AS,KPN,,Koninklijke KPN NV,EUR,COMMON,NL,true
+SEC_0816,BAER.S,BAER,,Julius Baer Gruppe AG,CHF,COMMON,CH,true
+SEC_0817,SOLV.N,SOLV,,Solventum Corporation,USD,COMMON,US,true
+SEC_0818,CVC.AS,CVC,,CVC Capital Partners PLC,EUR,COMMON,NL,true
+SEC_0819,TYL.N,TYL,,"Tyler Technologies, Inc.",USD,COMMON,US,true
+SEC_0820,AKAM.OQ,AKAM,,Akamai Technologies Inc,USD,COMMON,US,true
+SEC_0821,DWSG.DE,DWSG,,DWS Group GmbH & Co KgaA,EUR,COMMON,DE,true
+SEC_0822,HST.OQ,HST,,"Host Hotels & Resorts, Inc.",USD,COMMON,US,true
+SEC_0823,EXOR.AS,EXOR,,EXOR NV,EUR,COMMON,NL,true
+SEC_0824,METSO.HE,METSO,,Metso Oyj,EUR,COMMON,FI,true
+SEC_0825,BKT.MC,BKT,,Bankinter SA,EUR,COMMON,ES,true
+SEC_0826,MAA.N,MAA,,Mid-America Apartment Communities Inc,USD,COMMON,US,true
+SEC_0827,STMN.S,STMN,,Straumann Holding AG,CHF,COMMON,CH,true
+SEC_0828,APA.OQ,APA,,APA Corporation,USD,COMMON,US,true
+SEC_0829,MKC.N,MKC,,"McCormick & Company, Incorporated",USD,COMMON,US,true
+SEC_0830,TPE.WA,TPE,,Tauron Polska Energia S.A.,PLN,COMMON,PL,true
+SEC_0831,SWK.N,SWK,,Stanley Black & Decker Inc,USD,COMMON,US,true
+SEC_0832,EDPR.LS,EDPR,,Edp Renewables SA,EUR,COMMON,PT,true
+SEC_0833,ASRNL.AS,ASRNL,,ASR Nederland N.V.,EUR,COMMON,NL,true
+SEC_0834,FBK.MI,FBK,,FinecoBank S.p.A.,EUR,COMMON,IT,true
+SEC_0835,IVZ.N,IVZ,,Invesco Ltd,USD,COMMON,US,true
+SEC_0836,ABF.L,ABF,,Associated British Foods PLC,GBP,COMMON,GB,true
+SEC_0837,EG.N,EG,,"Everest Group, Ltd.",USD,COMMON,US,true
+SEC_0838,DOC.N,DOC,,"Healthpeak Properties, Inc",USD,COMMON,US,true
+SEC_0839,MAS.N,MAS,,Masco Corporation,USD,COMMON,US,true
+SEC_0840,URW.PA,URW,,Unibail-Rodamco-Westfield SE,EUR,COMMON,FR,true
+SEC_0841,RVTY.N,RVTY,,"Revvity, Inc.",USD,COMMON,US,true
+SEC_0842,TXT.N,TXT,,Textron Inc,USD,COMMON,US,true
+SEC_0843,TRMB.OQ,TRMB,,Trimble Inc,USD,COMMON,US,true
+SEC_0844,SJM.N,SJM,,The J. M. Smucker Company,USD,COMMON,US,true
+SEC_0845,AIZ.N,AIZ,,Assurant Inc,USD,COMMON,US,true
+SEC_0846,SOON.S,SOON,,Sonova Holding AG,CHF,COMMON,CH,true
+SEC_0847,ELI.BR,ELI,,Elia Group SA,EUR,COMMON,BE,true
+SEC_0848,BAWG.VI,BAWG,,BAWAG Group AG,EUR,COMMON,AT,true
+SEC_0849,CONG.DE,CONG,,Continental AG,EUR,COMMON,DE,true
+SEC_0850,CRL.N,CRL,,"Charles River Laboratories International, Inc.",USD,COMMON,US,true
+SEC_0851,MAP.MC,MAP,,Mapfre SA,EUR,COMMON,ES,true
+SEC_0852,COO.OQ,COO,,"The Cooper Companies, Inc.",USD,COMMON,US,true
+SEC_0853,HLMA.L,HLMA,,Halma PLC,GBP,COMMON,GB,true
+SEC_0854,REG.OQ,REG,,Regency Centers Corp,USD,COMMON,US,true
+SEC_0855,IPN.PA,IPN,,Ipsen SA,EUR,COMMON,FR,true
+SEC_0856,LULU.OQ,LULU,,lululemon athletica inc.,USD,COMMON,US,true
+SEC_0857,ERIE.OQ,ERIE,,Erie Indemnity Co,USD,COMMON,US,true
+SEC_0858,LII.N,LII,,Lennox International Inc.,USD,COMMON,US,true
+SEC_0859,KYGa.I,KYGA,,Kerry Group PLC,EUR,COMMON,IE,true
+SEC_0860,BAX.N,BAX,,Baxter International Inc.,USD,COMMON,US,true
+SEC_0861,AVY.N,AVY,,Avery Dennison Corp,USD,COMMON,US,true
+SEC_0862,ALLE.N,ALLE,,Allegion PLC,USD,COMMON,US,true
+SEC_0863,HAS.OQ,HAS,,"Hasbro, Inc.",USD,COMMON,US,true
+SEC_0864,GL.N,GL,,Globe Life Inc.,USD,COMMON,US,true
+SEC_0865,SGRO.L,SGRO,,SEGRO PLC,GBP,COMMON,GB,true
+SEC_0866,CSGP.OQ,CSGP,,"CoStar Group, Inc.",USD,COMMON,US,true
+SEC_0867,SY1G.DE,SY1G,,Symrise AG,EUR,COMMON,DE,true
+SEC_0868,LOGN.S,LOGN,,Logitech international S.A.,CHF,COMMON,CH,true
+SEC_0869,EUFI.PA,EUFI,,Eurofins Scientific SE,EUR,COMMON,FR,true
+SEC_0870,UPM.HE,UPM,,UPM-Kymmene Oyj,EUR,COMMON,FI,true
+SEC_0871,AEGN.AS,AEGN,,Aegon Ltd.,EUR,COMMON,NL,true
+SEC_0872,BFb.N,BFB,,Brown-Forman Corporation,USD,COMMON,US,true
+SEC_0873,IT.N,IT,,"Gartner, Inc.",USD,COMMON,US,true
+SEC_0874,BVI.PA,BVI,,Bureau Veritas SA,EUR,COMMON,FR,true
+SEC_0875,CLX.N,CLX,,The Clorox Company,USD,COMMON,US,true
+SEC_0876,KTY.WA,KTY,,Grupa Kety S.A.,PLN,COMMON,PL,true
+SEC_0877,ADML.L,ADML,,Admiral Group PLC,GBP,COMMON,GB,true
+SEC_0878,GDDY.N,GDDY,,GoDaddy Inc.,USD,COMMON,US,true
+SEC_0879,PSKY.OQ,PSKY,,Paramount Skydance Corp,USD,COMMON,US,true
+SEC_0880,AAF.L,AAF,,Airtel Africa PLC,GBP,COMMON,GB,true
+SEC_0881,JKHY.OQ,JKHY,,Jack Henry & Associates Inc,USD,COMMON,US,true
+SEC_0882,DECK.N,DECK,,Deckers Outdoor Corporation,USD,COMMON,US,true
+SEC_0883,UDR.N,UDR,,"UDR, Inc.",USD,COMMON,US,true
+SEC_0884,HRL.N,HRL,,Hormel Foods Corp,USD,COMMON,US,true
+SEC_0885,PNW.N,PNW,,Pinnacle West Capital Corporation,USD,COMMON,US,true
+SEC_0886,ANA.MC,ANA,,"Acciona, S.A.",EUR,COMMON,ES,true
+SEC_0887,HII.N,HII,,"HUNTINGTON INGALLS INDUSTRIES, INC.",USD,COMMON,US,true
+SEC_0888,DPZ.OQ,DPZ,,"Domino's Pizza, Inc.",USD,COMMON,US,true
+SEC_0889,CARR.PA,CARR2,,Carrefour SA,EUR,COMMON,FR,true
+SEC_0890,DVA.N,DVA,,DaVita Inc,USD,COMMON,US,true
+SEC_0891,INF.L,INF,,Informa PLC,GBP,COMMON,GB,true
+SEC_0892,TECH.OQ,TECH,,Bio-Techne Corporation,USD,COMMON,US,true
+SEC_0893,ORNBV.HE,ORNBV,,Orion Oyj,EUR,COMMON,FI,true
+SEC_0894,EDV.L,EDV,,Endeavour Mining plc,GBP,COMMON,GB,true
+SEC_0895,ALGN.OQ,ALGN,,"Align Technology, Inc.",USD,COMMON,US,true
+SEC_0896,RECI.MI,RECI,,Recordati Industria Chimica e Farmaceutica S.p.A.,EUR,COMMON,IT,true
+SEC_0897,BXP.N,BXP,,"BXP, Inc.",USD,COMMON,US,true
+SEC_0898,IDR.MC,IDR,,Indra Sistemas SA,EUR,COMMON,ES,true
+SEC_0899,G1AG.DE,G1AG,,GEA Group AG,EUR,COMMON,DE,true
+SEC_0900,FDS.N,FDS,,FactSet Research Systems Inc.,USD,COMMON,US,true
+SEC_0901,BCVN.S,BCVN,,Banque Cantonale Vaudoise,CHF,COMMON,CH,true
+SEC_0902,LOIM.PA,LOIM,,Klepierre SA,EUR,COMMON,FR,true
+SEC_0903,BOLL.PA,BOLL,,Bollore SE,EUR,COMMON,FR,true
+SEC_0904,BEAN.S,BEAN,,Belimo Holding AG,CHF,COMMON,CH,true
+SEC_0905,ADP.PA,ADP2,,Aeroports de Paris SA,EUR,COMMON,FR,true
+SEC_0906,ACCP.PA,ACCP,,Accor SA,EUR,COMMON,FR,true
+SEC_0907,GNRC.N,GNRC,,Generac Holdings Inc.,USD,COMMON,US,true
+SEC_0908,RXL.PA,RXL,,Rexel SA,EUR,COMMON,FR,true
+SEC_0909,FOUG.PA,FOUG,,Eiffage SA,EUR,COMMON,FR,true
+SEC_0910,FMEG.DE,FMEG,,Fresenius Medical Care AG,EUR,COMMON,DE,true
+SEC_0911,MICCT.AS,MICCT,,The Magnum Ice Cream Company N.V.,EUR,COMMON,NL,true
+SEC_0912,CPT.N,CPT,,Camden Property Trust,USD,COMMON,US,true
+SEC_0913,UU.L,UU,,United Utilities Group PLC,GBP,COMMON,GB,true
+SEC_0914,AKZO.AS,AKZO,,Akzo Nobel N.V.,EUR,COMMON,NL,true
+SEC_0915,MGM.N,MGM,,MGM Resorts International,USD,COMMON,US,true
+SEC_0916,AES.N,AES,,The AES Corporation,USD,COMMON,US,true
+SEC_0917,LOTB.BR,LOTB,,Lotus Bakeries NV,EUR,COMMON,BE,true
+SEC_0918,GETP.PA,GETP,,Getlink SE,EUR,COMMON,FR,true
+SEC_0919,VERB.VI,VERB,,Verbund AG,EUR,COMMON,AT,true
+SEC_0920,SPSN.S,SPSN,,Swiss Prime Site AG,CHF,COMMON,CH,true
+SEC_0921,FRT.N,FRT,,Federal Realty Investment Trust,USD,COMMON,US,true
+SEC_0922,UHS.N,UHS,,Universal Health Services Inc,USD,COMMON,US,true
+SEC_0923,HAGG.DE,HAGG,,Hensoldt AG,EUR,COMMON,DE,true
+SEC_0924,PODD.OQ,PODD,,Insulet Corporation,USD,COMMON,US,true
+SEC_0925,HSIC.OQ,HSIC,,"Henry Schein, Inc.",USD,COMMON,US,true
+SEC_0926,SWKS.OQ,SWKS,,"Skyworks Solutions, Inc.",USD,COMMON,US,true
+SEC_0927,DPLM.L,DPLM,,Diploma PLC,GBP,COMMON,GB,true
+SEC_0928,PNR.N,PNR,,Pentair PLC,USD,COMMON,US,true
+SEC_0929,WYNN.OQ,WYNN,,"Wynn Resorts, Limited",USD,COMMON,US,true
+SEC_0930,WISEa.L,WISEA,,Wise Group PLC,GBP,COMMON,GB,true
+SEC_0931,UHR.S,UHR,,The Swatch Group AG,CHF,COMMON,CH,true
+SEC_0932,GBLB.BR,GBLB,,Groep Brussel Lambert NV,EUR,COMMON,BE,true
+SEC_0933,LHAG.DE,LHAG,,Deutsche Lufthansa AG,EUR,COMMON,DE,true
+SEC_0934,SVT.L,SVT,,Severn Trent PLC,GBP,COMMON,GB,true
+SEC_0935,IETB.BR,IETB,,D'Ieteren Group SA,EUR,COMMON,BE,true
+SEC_0936,SDLF.L,SDLF,,Standard Life PLC,GBP,COMMON,GB,true
+SEC_0937,APTV.N,APTV,,APTIV PLC,USD,COMMON,US,true
+SEC_0938,SDR.L,SDR,,Schroders PLC,GBP,COMMON,GB,true
+SEC_0939,VSURE.ST,VSURE,,Verisure PLC,SEK,COMMON,SE,true
+SEC_0940,ACKB.BR,ACKB,,Ackermans & Van Haaren NV,EUR,COMMON,BE,true
+SEC_0941,UNI.MC,UNI,,Unicaja Banco SA,EUR,COMMON,ES,true
+SEC_0942,TKAG.DE,TKAG,,thyssenkrupp AG,EUR,COMMON,DE,true
+SEC_0943,SOF.BR,SOF,,Sofina SA,EUR,COMMON,BE,true
+SEC_0944,NDXG.DE,NDXG,,Nordex SE,EUR,COMMON,DE,true
+SEC_0945,BNZL.L,BNZL,,Bunzl plc,GBP,COMMON,GB,true
+SEC_0946,ITRK.L,ITRK,,Intertek Group PLC,GBP,COMMON,GB,true
+SEC_0947,ARE.N,ARE,,"Alexandria Real Estate Equities, Inc",USD,COMMON,US,true
+SEC_0948,KESKOB.HE,KESKOB,,Kesko Oyj,EUR,COMMON,FI,true
+SEC_0949,BIOX.PA,BIOX,,Biomerieux SA,EUR,COMMON,FR,true
+SEC_0950,SPMI.MI,SPMI,,Saipem SpA,EUR,COMMON,IT,true
+SEC_0951,IG.MI,IG,,Italgas SpA,EUR,COMMON,IT,true
+SEC_0952,BNRGn.DE,BNRGN,,Brenntag SE,EUR,COMMON,DE,true
+SEC_0953,SN.L,SN,,Smith & Nephew PLC,GBP,COMMON,GB,true
+SEC_0954,RTO.L,RTO,,Rentokil Initial PLC,GBP,COMMON,GB,true
+SEC_0955,EVKn.DE,EVKN,,Evonik Industries AG,EUR,COMMON,DE,true
+SEC_0956,RENA.PA,RENA,,Renault SA,EUR,COMMON,FR,true
+SEC_0957,AYV.PA,AYV,,Ayvens SA,EUR,COMMON,FR,true
+SEC_0958,EXHO.PA,EXHO,,Sodexo SA,EUR,COMMON,FR,true
+SEC_0959,ANDR.VI,ANDR,,Andritz AG,EUR,COMMON,AT,true
+SEC_0960,ABVX.PA,ABVX,,Abivax SA,EUR,COMMON,FR,true
+SEC_0961,MNG.L,MNG,,M&G PLC,GBP,COMMON,GB,true
+SEC_0962,SYENS.BR,SYENS,,Syensqo NV,EUR,COMMON,BE,true
+SEC_0963,MRL.MC,MRL,,"MERLIN Properties SOCIMI, S.A.",EUR,COMMON,ES,true
+SEC_0964,TUB.BR,TUB,,Financiere de Tubize SA,EUR,COMMON,BE,true
+SEC_0965,VOES.VI,VOES,,voestalpine AG,EUR,COMMON,AT,true
+SEC_0966,REDE.MC,REDE,,Redeia Corporacion SA,EUR,COMMON,ES,true
+SEC_0967,MKS.L,MKS,,Marks and Spencer Group PLC,GBP,COMMON,GB,true
+SEC_0968,AOS.N,AOS,,A. O. Smith Corporation,USD,COMMON,US,true
+SEC_0969,NEKG.DE,NEKG,,Nemetschek SE,EUR,COMMON,DE,true
+SEC_0970,NAFG.DE,NAFG,,Aurubis AG,EUR,COMMON,DE,true
+SEC_0971,GTT.PA,GTT,,Gaztransport et Technigaz SA,EUR,COMMON,FR,true
+SEC_0972,BEZG.L,BEZG,,Beazley PLC,GBP,COMMON,GB,true
+SEC_0973,INPST.AS,INPST,,InPost SA,EUR,COMMON,NL,true
+SEC_0974,HLE.DE,HLE,,HELLA GmbH & Co KGaA,EUR,COMMON,DE,true
+SEC_0975,BGN.MI,BGN,,Banca Generali SpA,EUR,COMMON,IT,true
+SEC_0976,QIA.DE,QIA,,QIAGEN N.V.,EUR,COMMON,DE,true
+SEC_0977,SMIN.L,SMIN,,Smiths Group PLC,GBP,COMMON,GB,true
+SEC_0978,NCLH.N,NCLH,,Norwegian Cruise Line Holdings Ltd.,USD,COMMON,US,true
+SEC_0979,MOS.N,MOS,,Mosaic Co,USD,COMMON,US,true
+SEC_0980,SPIE.PA,SPIE,,Spie SA,EUR,COMMON,FR,true
+SEC_0981,IMI.L,IMI,,Imi PLC,GBP,COMMON,GB,true
+SEC_0982,BZU.MI,BZU,,Buzzi SpA,EUR,COMMON,IT,true
+SEC_0983,WEIR.L,WEIR,,The Weir Group PLC,GBP,COMMON,GB,true
+SEC_0984,SBRY.L,SBRY,,J Sainsbury PLC,GBP,COMMON,GB,true
+SEC_0985,A2.MI,A2,,A2A S.p.A.,EUR,COMMON,IT,true
+SEC_0986,TAP.N,TAP,,Molson Coors Beverage Company,USD,COMMON,US,true
+SEC_0987,KBCA.BR,KBCA,,Kbc Ancora NV,EUR,COMMON,BE,true
+SEC_0988,BLDR.N,BLDR,,Builders FirstSource Inc,USD,COMMON,US,true
+SEC_0989,PCT.L,PCT,,Polar Capital Technology Trust PLC,GBP,COMMON,GB,true
+SEC_0990,KCRA.HE,KCRA,,Konecranes Oyj,EUR,COMMON,FI,true
+SEC_0991,EDEN.PA,EDEN,,Edenred SE,EUR,COMMON,FR,true
+SEC_0992,ACLN.S,ACLN,,Accelleron Industries AG,CHF,COMMON,CH,true
+SEC_0993,PIRC.MI,PIRC,,Pirelli & C. S.p.A.,EUR,COMMON,IT,true
+SEC_0994,VZN.S,VZN,,VZ Holding AG,CHF,COMMON,CH,true
+SEC_0995,CNA.L,CNA,,Centrica PLC,GBP,COMMON,GB,true
+SEC_0996,RAAG.DE,RAAG,,Rational AG,EUR,COMMON,DE,true
+SEC_0997,CPRI.MI,CPRI,,Davide Campari Milano NV,EUR,COMMON,IT,true
+SEC_0998,SHA0n.DE,SHA0N,,Schaeffler AG,EUR,COMMON,DE,true
+SEC_0999,RAND.AS,RAND,,Randstad N.V.,EUR,COMMON,NL,true
+SEC_1000,MTLN.L,MTLN,,Metlen Energy & Metals PLC,GBP,COMMON,GB,true
+SEC_1001,PSHP.L,PSHP,,Pershing Square Holdings Ltd,GBP,COMMON,GB,true
+SEC_1002,PSPN.S,PSPN,,PSP Swiss Property AG,CHF,COMMON,CH,true
+SEC_1003,BKWB.S,BKWB,,BKW AG,CHF,COMMON,CH,true
+SEC_1004,AVOL.S,AVOL,,Avolta AG,CHF,COMMON,CH,true
+SEC_1005,SQN.S,SQN,,Swissquote Group Holding SA,CHF,COMMON,CH,true
+SEC_1006,FCIT.L,FCIT,,F&C Investment Trust PLC,GBP,COMMON,GB,true
+SEC_1007,MRON.L,MRON,,Melrose Industries PLC,GBP,COMMON,GB,true
+SEC_1008,LTMC.MI,LTMC,,Lottomatica Group SpA,EUR,COMMON,IT,true
+SEC_1009,FHZN.S,FHZN,,Flughafen Zuerich AG,CHF,COMMON,CH,true
+SEC_1010,TTD.OQ,TTD,,Trade Desk Inc,USD,COMMON,US,true
+SEC_1011,AOO.BR,AOO,,Aedifica NV,EUR,COMMON,BE,true
+SEC_1012,DLG.MI,DLG,,De' Longhi SpA,EUR,COMMON,IT,true
+SEC_1013,NEXS.PA,NEXS,,Nexans SA,EUR,COMMON,FR,true
+SEC_1014,INVP.L,INVP,,Investec PLC,GBP,COMMON,GB,true
+SEC_1015,GAW.L,GAW,,Games Workshop Group PLC,GBP,COMMON,GB,true
+SEC_1016,SCOR.PA,SCOR,,Scor SE,EUR,COMMON,FR,true
+SEC_1017,BCU.MI,BCU,,Brunello Cucinelli S.p.A.,EUR,COMMON,IT,true
+SEC_1018,ELISA.HE,ELISA,,Elisa Oyj,EUR,COMMON,FI,true
+SEC_1019,BARN.S,BARN,,Barry Callebaut AG,CHF,COMMON,CH,true
+SEC_1020,CCC.L,CCC,,Computacenter PLC,GBP,COMMON,GB,true
+SEC_1021,GRLS.MC,GRLS,,"Grifols, S.A.",EUR,COMMON,ES,true
+SEC_1022,ZALG.DE,ZALG,,Zalando SE,EUR,COMMON,DE,true
+SEC_1023,ATSV.VI,ATSV,,AT & S Austria Technologie & Systemtechnik AG,EUR,COMMON,AT,true
+SEC_1024,KGX.DE,KGX,,Kion Group AG,EUR,COMMON,DE,true
+SEC_1025,FRAG.DE,FRAG,,Fraport AG Frankfurt Airport Services Worldwide,EUR,COMMON,DE,true
+SEC_1026,IMCD.AS,IMCD,,IMCD N.V.,EUR,COMMON,NL,true
+SEC_1027,HSX.L,HSX,,Hiscox Ltd,GBP,COMMON,GB,true
+SEC_1028,UMI.BR,UMI,,Umicore SA,EUR,COMMON,BE,true
+SEC_1029,SBMO.AS,SBMO,,SBM Offshore N.V.,EUR,COMMON,NL,true
+SEC_1030,G24n.DE,G24N,,Scout24 SE,EUR,COMMON,DE,true
+SEC_1031,BGEO.L,BGEO,,Lion Finance Group PLC,GBP,COMMON,GB,true
+SEC_1032,EVDG.DE,EVDG,,CTS Eventim AG & Co KgaA,EUR,COMMON,DE,true
+SEC_1033,HRA.MI,HRA,,Hera S.p.A.,EUR,COMMON,IT,true
+SEC_1034,TKMS.DE,TKMS,,TKMS AG & Co KgaA,EUR,COMMON,DE,true
+SEC_1035,CVO.PA,CVO,,Covivio SA,EUR,COMMON,FR,true
+SEC_1036,ELIS.PA,ELIS,,Elis SA,EUR,COMMON,FR,true
+SEC_1037,AZMT.MI,AZMT,,Azimut Holding S.p.A.,EUR,COMMON,IT,true
+SEC_1038,ICGIN.L,ICGIN,,ICG PLC,GBP,COMMON,GB,true
+SEC_1039,VOPA.AS,VOPA,,Koninklijke Vopak N.V.,EUR,COMMON,NL,true
+SEC_1040,SUN.S,SUN,,Sulzer Ltd,CHF,COMMON,CH,true
+SEC_1041,TE.PA,TE,,Technip Energies N.V.,EUR,COMMON,FR,true
+SEC_1042,DCC.L,DCC,,DCC Energy PLC,GBP,COMMON,GB,true
+SEC_1043,ALLFG.AS,ALLFG,,Allfunds Group PLC,EUR,COMMON,NL,true
+SEC_1044,GFCP.PA,GFCP,,Gecina SA,EUR,COMMON,FR,true
+SEC_1045,GL9.I,GL9,,Glanbia PLC,EUR,COMMON,IE,true
+SEC_1046,VALMT.HE,VALMT,,Valmet Corp,EUR,COMMON,FI,true
+SEC_1047,SIGNC.S,SIGNC,,SIG Group AG,CHF,COMMON,CH,true
+SEC_1048,SPX.L,SPX2,,Spirax Group PLC,GBP,COMMON,GB,true
+SEC_1049,SFSN.S,SFSN,,SFS Group AG,CHF,COMMON,CH,true
+SEC_1050,KGF.L,KGF,,Kingfisher PLC,GBP,COMMON,GB,true
+SEC_1051,BAB.L,BAB,,Babcock International Group PLC,GBP,COMMON,GB,true
+SEC_1052,NEXII.MI,NEXII,,Nexi S.p.A.,EUR,COMMON,IT,true
+SEC_1053,UTDI.DE,UTDI,,United Internet AG,EUR,COMMON,DE,true
+SEC_1054,TEMN.S,TEMN,,Temenos AG,CHF,COMMON,CH,true
+SEC_1055,WDPP.BR,WDPP,,Warehouses de Pauw NV,EUR,COMMON,BE,true
+SEC_1056,LAND.L,LAND,,Land Securities Group PLC,GBP,COMMON,GB,true
+SEC_1057,ALWA.L,ALWA,,Alliance Witan PLC,GBP,COMMON,GB,true
+SEC_1058,RRTL.DE,RRTL,,RTL Group SA,EUR,COMMON,DE,true
+SEC_1059,IOSn.DE,IOSN,,IONOS Group SE,EUR,COMMON,DE,true
+SEC_1060,AG1G.DE,AG1G,,AUTO1 Group SE,EUR,COMMON,DE,true
+SEC_1061,FPE3_p.DE,FPE3P,,Fuchs Se,EUR,COMMON,DE,true
+SEC_1062,WCHG.DE,WCHG,,Wacker Chemie AG,EUR,COMMON,DE,true
+SEC_1063,CRDA.L,CRDA,,Croda International PLC,GBP,COMMON,GB,true
+SEC_1064,BC8G.DE,BC8G,,Bechtle AG,EUR,COMMON,DE,true
+SEC_1065,R3NK.DE,R3NK,,RENK Group AG,EUR,COMMON,DE,true
+SEC_1066,VLLP.PA,VLLP,,Vallourec SA,EUR,COMMON,FR,true
+SEC_1067,AALB.AS,AALB,,Aalberts N.V.,EUR,COMMON,NL,true
+SEC_1068,REY.MI,REY,,Reply SpA,EUR,COMMON,IT,true
+SEC_1069,IGG.L,IGG,,IG Group Holdings PLC,GBP,COMMON,GB,true
+SEC_1070,ABDN.L,ABDN,,Aberdeen Group PLC,GBP,COMMON,GB,true
+SEC_1071,BBOXT.L,BBOXT,,Tritax Big Box Reit PLC,GBP,COMMON,GB,true
+SEC_1072,GF.S,GF,,Georg Fischer AG,CHF,COMMON,CH,true
+SEC_1073,AKE.PA,AKE,,Arkema SA,EUR,COMMON,FR,true
+SEC_1074,ACX.MC,ACX,,"Acerinox, S.A.",EUR,COMMON,ES,true
+SEC_1075,BTRW.L,BTRW,,Barratt Redrow PLC,GBP,COMMON,GB,true
+SEC_1076,LMPL.L,LMPL,,LondonMetric Property PLC,GBP,COMMON,GB,true
+SEC_1077,CTEC.L,CTEC,,ConvaTec Group PLC,GBP,COMMON,GB,true
+SEC_1078,ENAG.MC,ENAG,,Enagas SA,EUR,COMMON,ES,true
+SEC_1079,PSHG_p.DE,PSHGP,,Porsche Automobil Holding SE,EUR,COMMON,DE,true
+SEC_1080,BLND.L,BLND,,British Land Company PLC,GBP,COMMON,GB,true
+SEC_1081,HWDN.L,HWDN,,Howden Joinery Group PLC,GBP,COMMON,GB,true
+SEC_1082,DKSH.S,DKSH,,DKSH Holding AG,CHF,COMMON,CH,true
+SEC_1083,GALE.S,GALE,,Galenica AG,CHF,COMMON,CH,true
+SEC_1084,TEPRF.PA,TEPRF,,Teleperformance SE,EUR,COMMON,FR,true
+SEC_1085,BALF.L,BALF,,Balfour Beatty PLC,GBP,COMMON,GB,true
+SEC_1086,ADEN.S,ADEN,,Adecco Group AG,CHF,COMMON,CH,true
+SEC_1087,FTKn.DE,FTKN,,flatexDEGIRO SE,EUR,COMMON,DE,true
+SEC_1088,FDJU.PA,FDJU,,FDJ United,EUR,COMMON,FR,true
+SEC_1089,JD.L,JD,,JD Sports Fashion PLC,GBP,COMMON,GB,true
+SEC_1090,WTB.L,WTB,,Whitbread PLC,GBP,COMMON,GB,true
+SEC_1091,AUTOA.L,AUTOA,,Autotrader Group PLC,GBP,COMMON,GB,true
+SEC_1092,ITPG.MI,ITPG,,Interpump Group S.p.A.,EUR,COMMON,IT,true
+SEC_1093,IFCN.S,IFCN,,Inficon Holding AG,CHF,COMMON,CH,true
+SEC_1094,ROR.L,ROR,,Rotork PLC,GBP,COMMON,GB,true
+SEC_1095,ARDS.AS,ARDS,,Arcadis NV,EUR,COMMON,NL,true
+SEC_1096,BRBY.L,BRBY,,Burberry Group PLC,GBP,COMMON,GB,true
+SEC_1097,SOIT.PA,SOIT,,Soitec SA,EUR,COMMON,FR,true
+SEC_1098,LEGn.DE,LEGN,,LEG Immobilien SE,EUR,COMMON,DE,true
+SEC_1099,KRNG.DE,KRNG,,Krones AG,EUR,COMMON,DE,true
+SEC_1100,PSN.L,PSN,,Persimmon PLC,GBP,COMMON,GB,true
+SEC_1101,PUMG.DE,PUMG,,Puma SE,EUR,COMMON,DE,true
+SEC_1102,IVG.MI,IVG,,Iveco Group NV,EUR,COMMON,IT,true
+SEC_1103,RMV.L,RMV,,Rightmove PLC,GBP,COMMON,GB,true
+SEC_1104,ZEG.L,ZEG,,Zegona Communications PLC,GBP,COMMON,GB,true
+SEC_1105,TUI1n.DE,TUI1N,,Tui AG,EUR,COMMON,DE,true
+SEC_1106,AMV0n.DE,AMV0N,,Aumovio Se,EUR,COMMON,DE,true
+SEC_1107,HIAB.HE,HIAB,,Hiab Oyj,EUR,COMMON,FI,true
+SEC_1108,RS1R.L,RS1R,,RS Group PLC,GBP,COMMON,GB,true
+SEC_1109,SOPR.PA,SOPR,,Sopra Steria Group SA,EUR,COMMON,FR,true
+SEC_1110,EMG.L,EMG,,Man Group PLC,GBP,COMMON,GB,true
+SEC_1111,HUH1V.HE,HUH1V,,Huhtamaki Oyj,EUR,COMMON,FI,true
+SEC_1112,RUBF.PA,RUBF,,Rubis SCA,EUR,COMMON,FR,true
+SEC_1113,VLOF.PA,VLOF,,Valeo SE,EUR,COMMON,FR,true
+SEC_1114,SCYR.MC,SCYR,,"Sacyr, S.A.",EUR,COMMON,ES,true
+SEC_1115,SZGG.DE,SZGG,,Salzgitter AG,EUR,COMMON,DE,true
+SEC_1116,HOCM.L,HOCM,,Hochschild Mining PLC,GBP,COMMON,GB,true
+SEC_1117,HIK.L,HIK,,Hikma Pharmaceuticals PLC,GBP,COMMON,GB,true
+SEC_1118,SFZN.S,SFZN,,Siegfried Holding AG,CHF,COMMON,CH,true
+SEC_1119,HUBN.S,HUBN,,Huber+Suhner AG,CHF,COMMON,CH,true
+SEC_1120,ALLN.S,ALLN,,Allreal Holding AG,CHF,COMMON,CH,true
+SEC_1121,PAFR.L,PAFR,,Pan African Resources PLC,GBP,COMMON,GB,true
+SEC_1122,ENT.L,ENT,,Entain PLC,GBP,COMMON,GB,true
+SEC_1123,MANTA.HE,MANTA,,Mandatum Oyj,EUR,COMMON,FI,true
+SEC_1124,BKGH.L,BKGH,,The Berkeley Group Holdings plc,GBP,COMMON,GB,true
+SEC_1125,PUIGb.MC,PUIGB,,"Puig Brands, S.A.",EUR,COMMON,ES,true
+SEC_1126,GBFG.DE,GBFG,,Bilfinger Se,EUR,COMMON,DE,true
+SEC_1127,BAMN.AS,BAMN,,Koninklijke BAM Groep NV,EUR,COMMON,NL,true
+SEC_1128,BUCN.S,BUCN,,Bucher Industries AG,CHF,COMMON,CH,true
+SEC_1129,AT1.DE,AT1,,Aroundtown SA,EUR,COMMON,DE,true
+SEC_1130,SUNN.S,SUNN,,Sunrise Communications Ltd,CHF,COMMON,CH,true
+SEC_1131,TW.L,TW,,Taylor Wimpey PLC,GBP,COMMON,GB,true
+SEC_1132,INCH.L,INCH,,Inchcape PLC,GBP,COMMON,GB,true
+SEC_1133,CWK.L,CWK,,Cranswick PLC,GBP,COMMON,GB,true
+SEC_1134,SDFGn.DE,SDFGN,,K+S AG,EUR,COMMON,DE,true
+SEC_1135,FNTGn.DE,FNTGN,,freenet AG,EUR,COMMON,DE,true
+SEC_1136,SHCS.L,SHCS,,Shaftesbury Capital PLC,GBP,COMMON,GB,true
+SEC_1137,BPTB.L,BPTB,,Bridgepoint Group PLC,GBP,COMMON,GB,true
+SEC_1138,JMAT.L,JMAT,,Johnson Matthey PLC,GBP,COMMON,GB,true
+SEC_1139,TBCG.L,TBCG,,TBC Bank Group PLC,GBP,COMMON,GB,true
+SEC_1140,MTO.L,MTO,,Mitie Group PLC,GBP,COMMON,GB,true
+SEC_1141,PLUSP.L,PLUSP,,Plus500 Ltd.,GBP,COMMON,GB,true
+SEC_1142,CMBN.S,CMBN,,Cembra Money Bank AG,CHF,COMMON,CH,true
+SEC_1143,WAFGn.DE,WAFGN,,Siltronic AG,EUR,COMMON,DE,true
+SEC_1144,COTNE.S,COTNE,,Comet Holding AG,CHF,COMMON,CH,true
+SEC_1145,ITV.L,ITV,,ITV PLC,GBP,COMMON,GB,true
+SEC_1146,BOSSn.DE,BOSSN,,Hugo Boss AG,EUR,COMMON,DE,true
+SEC_1147,QLT.L,QLT,,Quilter PLC,GBP,COMMON,GB,true
+SEC_1148,VIS.MC,VIS,,Viscofan SA,EUR,COMMON,ES,true
+SEC_1149,UTG.L,UTG,,Unite Group PLC,GBP,COMMON,GB,true
+SEC_1150,QQ.L,QQ,,QinetiQ Group PLC,GBP,COMMON,GB,true
+SEC_1151,DRX.L,DRX,,Drax Group PLC,GBP,COMMON,GB,true
+SEC_1152,KEMIRA.HE,KEMIRA,,Kemira Oyj,EUR,COMMON,FI,true
+SEC_1153,MOBN.S,MOBN,,Mobimo Holding AG,CHF,COMMON,CH,true
+SEC_1154,SRP.L,SRP,,Serco Group PLC,GBP,COMMON,GB,true
+SEC_1155,TCAPI.L,TCAPI,,Tp Icap Group PLC,GBP,COMMON,GB,true
+SEC_1156,TEGG.DE,TEGG,,TAG Immobilien AG,EUR,COMMON,DE,true
+SEC_1157,PHP.L,PHP,,Primary Health Properties PLC,GBP,COMMON,GB,true
+SEC_1158,BWY.L,BWY,,Bellway PLC,GBP,COMMON,GB,true
+SEC_1159,VATN.S,VATN,,Valiant Holding AG,CHF,COMMON,CH,true
+SEC_1160,JENGn.DE,JENGN,,Jenoptik AG,EUR,COMMON,DE,true
+SEC_1161,ELGG.DE,ELGG,,Elmos Semiconductor SE,EUR,COMMON,DE,true
+SEC_1162,PNN.L,PNN,,Pennon Group PLC,GBP,COMMON,GB,true
+SEC_1163,DLN.L,DLN,,Derwent London PLC,GBP,COMMON,GB,true
+SEC_1164,SESFd.PA,SESFD,,SES SA,EUR,COMMON,FR,true
+SEC_1165,WBSV.VI,WBSV,,Wienerberger AG,EUR,COMMON,AT,true
+SEC_1166,DEZG.DE,DEZG,,DEUTZ AG,EUR,COMMON,DE,true
+SEC_1167,LIGHT.AS,LIGHT,,Signify N.V.,EUR,COMMON,NL,true
+SEC_1168,SMHNn.DE,SMHNN,,SUSS MicroTec SE,EUR,COMMON,DE,true
+SEC_1169,LXSG.DE,LXSG,,Lanxess AG,EUR,COMMON,DE,true

@@ -1,4 +1,4 @@
-"""Portfolio Optimiser — efficient frontier, cvxpy optimiser (background callback),
+"""Portfolio Optimiser, efficient frontier, cvxpy optimiser (background callback),
 and weighting-scheme backtest comparison."""
 from datetime import date
 
@@ -347,7 +347,7 @@ def update_scheme_comparison(rebal_label, opt_result):
             hovertemplate=f"{label}: %{{y:.3f}}<extra></extra>"))
     fig.add_hline(y=1.0, line_width=1, line_color="rgba(255,255,255,0.15)", line_dash="dot")
     fig.update_layout(
-        title=dict(text="<b>NAV comparison</b> — start at 1.0", x=0, xanchor="left"),
+        title=dict(text="<b>NAV comparison</b>: start at 1.0", x=0, xanchor="left"),
         height=420,
         yaxis=dict(tickformat=".2f", zeroline=False),
         xaxis=dict(showgrid=False),

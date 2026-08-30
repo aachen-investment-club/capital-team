@@ -82,6 +82,31 @@ CREATE TABLE IF NOT EXISTS rolling_stats (
 """
 
 
+# Additive column migrations, applied by write_connection() on every open.
+#
+# The fundamentals table grows as new LSEG descriptor fields are wired up (the
+# factor model asks the store which columns exist and drops descriptors it
+# cannot build — see data.loaders.get_fundamentals_columns). ADD COLUMN IF NOT
+# EXISTS makes this idempotent, so an older store file upgrades in place on the
+# next ingest and a newer one is untouched.
+MIGRATIONS = [
+    f"ALTER TABLE fundamentals ADD COLUMN IF NOT EXISTS {col} DOUBLE"
+    for col in (
+        "pe_ratio",          # trailing P/E            -> Earnings Yield
+        "ps_ratio",          # price / sales           -> Earnings Yield
+        "pcf_ratio",         # price / cash flow       -> Earnings Yield
+        "dividend_yield",    # trailing 12m yield      -> Dividend Yield
+        "roe",               # return on equity        -> Profitability
+        "roa",               # return on assets        -> Profitability
+        "gross_margin",      # gross profit / revenue  -> Profitability
+        "debt_to_ev",        # total debt / enterprise value -> Leverage
+        "debt_to_assets",    # retired: not entitled on our LSEG account
+        "revenue_ttm",       # level; growth is derived from the series
+        "eps_ttm",           # level; growth is derived from the series
+    )
+]
+
+
 def db_exists() -> bool:
     return settings.db_path.exists()
 
@@ -111,6 +136,8 @@ def write_connection(retry_seconds: int = 600) -> duckdb.DuckDBPyConnection:
                 raise
             time.sleep(5)
     con.execute(SCHEMA)
+    for statement in MIGRATIONS:
+        con.execute(statement)
     return con
 
 
@@ -125,6 +152,25 @@ def data_version() -> str:
         return ""
 
 
+def get_meta(key: str) -> str:
+    """Read one meta value (read-only). Empty string when absent."""
+    if not db_exists():
+        return ""
+    try:
+        df = query("SELECT value FROM meta WHERE key = ?", [key])
+        return df["value"].iloc[0] if len(df) else ""
+    except duckdb.Error:
+        return ""
+
+
+def set_meta(con: duckdb.DuckDBPyConnection, key: str, value: str) -> None:
+    """Write one meta value (writer connection only)."""
+    con.execute(
+        "INSERT INTO meta VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value",
+        [key, value],
+    )
+
+
 def bump_data_version(con: duckdb.DuckDBPyConnection) -> str:
     """Set meta.data_version to now (UTC ISO). Called at the end of ingest."""
     version = datetime.now(timezone.utc).isoformat(timespec="seconds")
@@ -134,6 +180,39 @@ def bump_data_version(con: duckdb.DuckDBPyConnection) -> str:
         [version],
     )
     return version
+
+
+def flush(table: str, frames: list[pd.DataFrame], bump: bool = False) -> int:
+    """Upsert a batch and *release the writer immediately*.
+
+    DuckDB's write lock is exclusive at the file level: while it is held, no
+    other process can open the database even read-only, so the dashboard goes
+    dark. A long backfill must therefore write in short bursts rather than hold
+    one connection for its whole run — see ingest.eod.run_eod.
+    """
+    frames = [f for f in frames if f is not None and len(f)]
+    if not frames:
+        return 0
+    df = pd.concat(frames, ignore_index=True) if len(frames) > 1 else frames[0]
+    con = write_connection()
+    try:
+        n = upsert(con, table, df)
+        if bump:
+            bump_data_version(con)
+        return n
+    finally:
+        con.close()
+
+
+def coverage(table: str, key: str) -> pd.DataFrame:
+    """Earliest and latest date held per key — the basis for `--resume`."""
+    if not db_exists():
+        return pd.DataFrame(columns=[key, "lo", "hi", "n"])
+    try:
+        return query(f"SELECT {key}, min(date) AS lo, max(date) AS hi, count(*) AS n "
+                     f"FROM {table} GROUP BY {key}")
+    except duckdb.Error:
+        return pd.DataFrame(columns=[key, "lo", "hi", "n"])
 
 
 def upsert(con: duckdb.DuckDBPyConnection, table: str, df: pd.DataFrame) -> int:

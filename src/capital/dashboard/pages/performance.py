@@ -1,4 +1,4 @@
-"""Performance — returns vs benchmarks, weightings, holdings, trade log, analytics.
+"""Performance, returns vs benchmarks, weightings, holdings, trade log, analytics.
 
 Reference page for the loaders/figures pattern: all data via capital.data.loaders,
 callbacks return figures only, matplotlib report exports via dcc.Download.
@@ -23,7 +23,7 @@ dash.register_page(
     description="Portfolio returns vs benchmarks, weightings, holdings and trade log.",
 )
 
-_DATE_MIN = date(2026, 5, 6)   # fund inception — first date in nav_history
+_DATE_MIN = date(2026, 5, 6)   # fund inception, first date in nav_history
 
 DISPLAY_NAMES: dict[str, str] = {
     "PORTFOLIO":   "AIC Portfolio",
@@ -112,8 +112,8 @@ def _basket_html(df: pd.DataFrame) -> str:
             pos_dr, pos_cr = pos["daily_return"], pos["cumulative_return"]
             pos_dr_col = GREEN if pos_dr >= 0 else RED
             pos_cr_col = GREEN if pos_cr >= 0 else RED
-            dr_str = "–" if is_base_ccy else f"{pos_dr:+.2%}"
-            cr_str = "–" if is_base_ccy else f"{pos_cr:+.2%}"
+            dr_str = ": " if is_base_ccy else f"{pos_dr:+.2%}"
+            cr_str = ": " if is_base_ccy else f"{pos_cr:+.2%}"
             rows_html += f"""
         <tr style="border-bottom:1px solid {BORDER};">
           <td style="padding:6px 14px 6px 30px;color:{TEXT};font-size:12px;font-weight:500;">{pos["symbol"]}</td>
@@ -187,7 +187,7 @@ def _export_returns_matplotlib(df_perf: pd.DataFrame) -> bytes:
         plt.close(fig)
         figures[name] = buf.getvalue()
 
-    # 1. Index — line chart
+    # 1. Index, line chart
     fig, ax = plt.subplots(figsize=(14, 7))
     ax.axhline(1.0, color=REF_C, linestyle=":", linewidth=1.2, zorder=1)
     for i, ticker in enumerate(tickers):
@@ -203,7 +203,7 @@ def _export_returns_matplotlib(df_perf: pd.DataFrame) -> bytes:
     fig.tight_layout()
     _save(fig, "returns_index.png")
 
-    # 2. Daily returns — grouped bar chart
+    # 2. Daily returns, grouped bar chart
     fig, ax = plt.subplots(figsize=(14, 7))
     ax.axhline(0, color=REF_C, linestyle=":", linewidth=1.2, zorder=1)
     dates = sorted(df_perf["date"].unique())
@@ -371,7 +371,7 @@ def layout():
 
     if not bench_ok:
         returns_section = dmc.Alert(
-            "Benchmark data not yet available — run the ingest job when S3 data is present.",
+            "Benchmark data not yet available: run the ingest job when S3 data is present.",
             color="blue", variant="light")
     else:
         returns_section = dmc.Stack([
@@ -520,7 +520,7 @@ def update_weightings(weight_date):
     return (_pie(_sort_pos_cash_first(df_snap), "symbol", "pct_nav"),
             _pie(by_class, "category", "pct_nav"),
             _pie(_theme_groups(df_snap), "theme", "pct_nav"),
-            f"Holdings — {snap_date.strftime('%d %b %Y')}",
+            f"Holdings, {snap_date.strftime('%d %b %Y')}",
             holdings)
 
 

@@ -1,4 +1,4 @@
-"""Trend Detection — SMA / Kalman 2D / UKF trend filters with linear forecasts,
+"""Trend Detection, SMA / Kalman 2D / UKF trend filters with linear forecasts,
 across benchmarks, portfolio positions, the aggregate NAV, and custom tickers.
 Each tab runs as a background callback."""
 import traceback
@@ -408,7 +408,7 @@ def run_positions(n, start, end, filters, sma_window, horizon, extras):
         stress = _stress_for(cfg, start, end)
         pos_map = _load_portfolio_positions(str(start), str(end))
         if not pos_map:
-            return dmc.Alert("No positions loaded — check the EOD store.",
+            return dmc.Alert("No positions loaded: check the EOD store.",
                              color="red", variant="light")
         results = {t: _run_filters(t, s, stress, cfg) for t, s in pos_map.items()}
         return _render_results(results, cfg)
