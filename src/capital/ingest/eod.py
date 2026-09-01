@@ -21,6 +21,44 @@ from capital.settings import settings
 
 log = logging.getLogger(__name__)
 
+
+class PhaseTimeoutError(RuntimeError):
+    """A single eod/fund phase ran past settings.lseg_max_phase_seconds.
+
+    Independent of *why* it's slow: this is a circuit breaker, not a diagnosis.
+    Whatever is looping, spot-check the log for what it was doing right before
+    this fired and fix that specifically, then rerun with --resume.
+    """
+
+
+class LSEGAuthError(RuntimeError):
+    """The LSEG session's credentials are no longer valid.
+
+    Raised only after one session-reopen has already been tried and failed
+    again. Unlike a data-content failure (a bad RIC, a flaky response), an auth
+    failure affects every request uniformly — no amount of retrying or batch
+    splitting can fix it, and treating it like an ordinary failure is what
+    turned one dead session into a 37-hour run (see _fetch_history). Callers
+    must let this propagate and abort the whole ingest step rather than
+    recording it as a per-batch failure.
+    """
+
+
+_AUTH_ERROR_MARKERS = ("token expired", "401", "unauthorized", "not authorized",
+                       "notauthorized", "invalid_grant", "invalid_token", "expired_token")
+
+
+def _is_auth_error(exc: Exception) -> bool:
+    text = str(exc).lower()
+    return any(marker in text for marker in _AUTH_ERROR_MARKERS)
+
+
+# Tracks whether a session-reopen has already been tried in this process. Reset
+# by open_lseg_session(), so a fresh `capital-ingest` invocation always gets one
+# recovery attempt, but a single run never loops trying to reopen forever.
+_session_reopen_attempted = False
+
+
 _OHLCV_FIELDS = ["TR.OPENPRICE", "TR.HIGHPRICE", "TR.LOWPRICE", "TR.CLOSEPRICE", "TR.VOLUME"]
 _OHLCV_COLS = ["open", "high", "low", "close", "volume"]
 _EOD_BATCH = 50   # RICs per get_history request
@@ -167,10 +205,20 @@ def _fetch_history(rics: list[str], fields: list[str], start: str, end: str,
                    _depth: int = 0) -> pd.DataFrame:
     """Fetch with retry, exponential backoff, and adaptive batch splitting.
 
-    Three failure modes have to be told apart on a long backfill:
+    Four failure modes have to be told apart on a long backfill, and getting
+    this wrong is expensive: a 1,000+ RIC run makes thousands of requests, so
+    any failure mode that isn't handled in O(1) time gets multiplied by however
+    many batches hit it.
 
+    - **Auth** (token expired, 401): every request fails identically regardless
+      of which RICs are in it, so retrying or splitting the batch cannot help —
+      it only multiplies the time wasted, because each split still fails and
+      splits again. Handled separately, first, before any retry/split logic:
+      one attempt to reopen the session, and if that doesn't fix it, abort
+      immediately by raising LSEGAuthError. This is the failure mode that once
+      turned a dead session into a 37-hour run instead of a 2-minute one.
     - **Transient** (timeout, connection reset, throttling): retry the same
-      request after a growing backoff. Most failures are this.
+      request after a growing backoff. Most non-auth failures are this.
     - **Too big**: a batch of 50 RICs over 10 years can exceed what the server
       will assemble in one response. Halving the batch and recursing turns one
       fatal error into two smaller successes.
@@ -180,11 +228,32 @@ def _fetch_history(rics: list[str], fields: list[str], start: str, end: str,
 
     Splitting handles the last two without needing to distinguish them.
     """
+    global _session_reopen_attempted
     attempts = settings.lseg_retry_attempts
     for attempt in range(1, attempts + 1):
         try:
             return _get_history_once(rics, fields, start, end)
         except Exception as exc:                                      # noqa: BLE001
+            if _is_auth_error(exc):
+                if not _session_reopen_attempted:
+                    _session_reopen_attempted = True
+                    log.error("LSEG session appears dead (%s) — reopening once "
+                             "and retrying", str(exc)[:150])
+                    try:
+                        close_lseg_session()
+                        open_lseg_session()
+                    except Exception as reopen_exc:                    # noqa: BLE001
+                        raise LSEGAuthError(
+                            f"LSEG session died and could not be reopened: {reopen_exc}"
+                        ) from reopen_exc
+                    continue      # retry this same request immediately: no backoff, no split
+                raise LSEGAuthError(
+                    f"LSEG session is not authenticating even after a reopen: {exc}. "
+                    f"The credential or grant is the problem, not the network: check "
+                    f"LSEG_USERNAME/LSEG_PASSWORD/LSEG_APP_KEY, or that this account's "
+                    f"one concurrent session isn't held elsewhere."
+                ) from exc
+
             transient = attempt < attempts
             if transient:
                 wait = min(settings.lseg_backoff_seconds * 2 ** (attempt - 1), 120)
@@ -316,12 +385,29 @@ def run_eod(start: str | None = None, days: int | None = None,
     n_batches = -(-len(rics) // size)
     log.info("[EOD] %d RICs  %s -> %s  (%d batches of %d)", len(rics), lo, hi, n_batches, size)
 
+    global _session_reopen_attempted
+    _session_reopen_attempted = False       # this phase gets its own one recovery attempt
     succeeded, failed = [], []
     started = time.time()
     for i in range(0, len(rics), size):
+        elapsed = time.time() - started
+        if elapsed > settings.lseg_max_phase_seconds:
+            raise PhaseTimeoutError(
+                f"[EOD] {_hms(elapsed)} elapsed with {len(succeeded)}/{len(rics)} "
+                f"RICs done and {i}/{len(rics)} attempted; aborting rather than "
+                f"continuing an apparently stuck run. Rerun with --resume."
+            )
         batch = rics[i:i + size]
         try:
             raw = _fetch_history(batch, _OHLCV_FIELDS, lo, hi)
+        except LSEGAuthError:
+            # Every request fails identically once the session is dead — there is
+            # nothing left to try. Abort now with what succeeded so far rather
+            # than recording the remaining hundreds of RICs as content failures
+            # one by one (which is what silently burned 37 hours previously).
+            log.error("[EOD] aborting: %d/%d RICs fetched before the session died",
+                      len(succeeded), len(rics))
+            raise
         except Exception as exc:                                     # noqa: BLE001
             log.error("[EOD] batch %d failed: %s", i // size + 1, str(exc)[:150])
             failed.extend(batch)
@@ -549,13 +635,30 @@ def run_fundamentals(start: str | None = None, days: int | None = None,
     filled: dict[str, int] = {c: 0 for c in FUND_NUMERIC_COLS}
     started = time.time()
 
+    global _session_reopen_attempted
+    _session_reopen_attempted = False       # this phase gets its own one recovery attempt
+
     for i in range(0, len(rics), size):
+        elapsed = time.time() - started
+        if elapsed > settings.lseg_max_phase_seconds:
+            raise PhaseTimeoutError(
+                f"[FUND] {_hms(elapsed)} elapsed with {len(seen_rics)}/{len(rics)} "
+                f"RICs done and {i}/{len(rics)} attempted; aborting rather than "
+                f"continuing an apparently stuck run. Rerun with --resume."
+            )
         batch = rics[i:i + size]
         frames: list[pd.DataFrame] = []
         merged: dict[str, pd.DataFrame] = {}
         for fields in field_groups:
             try:
                 raw = _fetch_history(batch, fields, lo, hi)
+            except LSEGAuthError:
+                # See run_eod: an auth failure is uniform across every request,
+                # so abort now rather than recording hundreds more as content
+                # failures one field-group at a time.
+                log.error("[FUND] aborting: %d/%d RICs fetched before the session died",
+                          len(seen_rics), len(rics))
+                raise
             except Exception as exc:                                  # noqa: BLE001
                 failures += 1
                 log.warning("[FUND] fields %s failed on this batch: %s", fields, str(exc)[:120])

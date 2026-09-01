@@ -52,6 +52,10 @@ class Settings:
     lseg_min_request_interval: float = float(os.getenv("LSEG_MIN_REQUEST_INTERVAL", "0.2"))
     lseg_retry_attempts: int = int(os.getenv("LSEG_RETRY_ATTEMPTS", "4"))
     lseg_backoff_seconds: float = float(os.getenv("LSEG_BACKOFF_SECONDS", "10"))
+    # Hard ceiling on a single eod/fund phase. Belt-and-braces against any
+    # retry logic (however carefully written) compounding into a silent
+    # multi-hour hang instead of a fast, actionable failure.
+    lseg_max_phase_seconds: float = float(os.getenv("LSEG_MAX_PHASE_SECONDS", str(4 * 3600)))
 
     # Ops
     healthcheck_url: str = os.getenv("HEALTHCHECK_URL", "")
