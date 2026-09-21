@@ -35,7 +35,9 @@ def _backend() -> FileSystemCache:
     return _cache
 
 
-_PORTFOLIO_TABLES = ("portfolio_and_benchmarks", "daily_weightings", "trade_log")
+_PORTFOLIO_TABLES = ("portfolio_and_benchmarks", "daily_weightings", "trade_log",
+                     "nav_history", "deposit_log")
+_DERIVED_TABLES = ("portfolio_and_benchmarks", "daily_weightings")
 
 
 def _portfolio_version() -> str:
@@ -45,7 +47,7 @@ def _portfolio_version() -> str:
         import boto3
         s3c = boto3.client("s3", region_name=settings.aws_region)
         for table in _PORTFOLIO_TABLES:
-            prefix = settings.derived_prefix if table in ("portfolio_and_benchmarks", "daily_weightings") \
+            prefix = settings.derived_prefix if table in _DERIVED_TABLES \
                 else settings.portfolio_prefix
             try:
                 parts.append(s3c.head_object(Bucket=settings.s3_bucket, Key=f"{prefix}/{table}.json")["ETag"])
@@ -53,7 +55,7 @@ def _portfolio_version() -> str:
                 parts.append("missing")
     else:
         for table in _PORTFOLIO_TABLES:
-            derived = table in ("portfolio_and_benchmarks", "daily_weightings")
+            derived = table in _DERIVED_TABLES
             path = (settings.root / "data" / "derived" / f"{table}.json") if derived \
                 else (settings.root / "data" / f"{table}.json")
             parts.append(str(path.stat().st_mtime) if path.exists() else "missing")

@@ -139,6 +139,73 @@ def get_trade_log() -> pd.DataFrame:
     return _log("trade_log", agg.sort_values("trade_date", ascending=False).reset_index(drop=True))
 
 
+@cached_by_version
+def get_nav_history() -> pd.DataFrame:
+    """Daily fund NAV history — the unit-price accounting behind the website.
+    Columns: date, fund_nav (unit price index; TWR-safe, unaffected by flows),
+             raw_nav_eur (actual EUR AUM), total_units,
+             spx_close, msci_world_close, msci_europe_close, sixty_forty_close
+    fund_nav only moves with investment performance: deposits/withdrawals buy
+    or redeem units at the PRIOR day's unit price (see the ingestion Lambda's
+    recompute_history), so pct-change(fund_nav) is a time-weighted return.
+    """
+    con = _mem_con()
+    try:
+        df = con.execute(
+            "SELECT * FROM read_json_auto("
+            f"'{_portfolio_json('nav_history')}') ORDER BY date"
+        ).df()
+    finally:
+        con.close()
+    df["date"] = pd.to_datetime(df["date"])
+    df = df.rename(columns={
+        "fundNav": "fund_nav", "rawNav": "raw_nav_eur", "totalUnits": "total_units",
+        "spxClose": "spx_close", "msciWorldClose": "msci_world_close",
+        "msciEuropeClose": "msci_europe_close", "sixtyFortyClose": "sixty_forty_close",
+    })
+    return _log("nav_history", df)
+
+
+@cached_by_version
+def get_deposit_log() -> pd.DataFrame:
+    """External cash flows: IBKR 'Deposits/Withdrawals' CashTransactions.
+    Columns: date, amount_eur (positive = contribution, negative = withdrawal),
+             currency, description
+    """
+    cols = ["date", "amount_eur", "currency", "description"]
+    con = _mem_con()
+    try:
+        df = con.execute(
+            "SELECT * FROM read_json_auto("
+            f"'{_portfolio_json('deposit_log')}') ORDER BY date"
+        ).df()
+    finally:
+        con.close()
+    if df.empty:
+        return pd.DataFrame(columns=cols)
+    df["date"] = pd.to_datetime(df["date"])
+    df = df.rename(columns={"amount": "amount_eur"})
+    return _log("deposit_log", df)
+
+
+@cached_by_version
+def get_daily_weightings_with_themes() -> pd.DataFrame:
+    """Daily weightings joined to theme mappings (falls back to asset category
+    — e.g. "Cash" — for symbols with no theme assignment).
+    Columns: date, symbol, name, isin, ccy, category, theme, pct_nav,
+             cumulative_return, daily_return
+    """
+    df = get_daily_weightings_history()
+    themes = get_theme_mappings()
+    if not themes.empty:
+        df = df.merge(themes[["symbol", "theme"]], on="symbol", how="left")
+    else:
+        df["theme"] = None
+    no_theme = df["theme"].isna()
+    df.loc[no_theme, "theme"] = df.loc[no_theme, "category"]
+    return _log("daily_weightings_with_themes", df)
+
+
 def get_theme_mappings() -> pd.DataFrame:
     """Theme/basket assignment per symbol. Columns: symbol, theme"""
     if not settings.ddb_baskets_table:
