@@ -32,6 +32,7 @@ dependencies = [
     "scipy>=1.11.0",
     "pykalman>=0.9.7",
     "filterpy>=1.4.5",
+    "kaleido>=1.4.0",
 ]
 
 [project.scripts]

@@ -19,8 +19,10 @@ midpoint - three times the colour-vision separation of the red/green scale, and
 a neutral rather than yellow midpoint so zero reads as zero.
 """
 
+import io
 import json
 import re
+import zipfile
 from datetime import date
 from functools import lru_cache
 
@@ -58,6 +60,30 @@ DIVERGING = [[0.0, "#1E3A5F"], [0.25, NEG], [0.5, MID], [0.75, POS], [1.0, "#7A6
 #: Fixed categorical order, never cycled, capped at 5 series per chart.
 SERIES = ["#0C1E40", "#B8962E", "#2E7D6B", "#8B2E4A", "#3A6B9C"]
 MAX_SERIES = 5
+
+# Barra sub-section only (tilts, GICS breakdown): the classic red/orange/
+# yellow/green/dark-green traffic-light read. Kept separate from DIVERGING
+# above, which stays steel-blue/gold everywhere else on this page for the
+# colour-vision-deficiency separation it's chosen for.
+# 10 fully-saturated anchor colours, interpolated continuously between them
+# (no hard edges) — smooth, but without RdYlGn's washed-out pale midpoint,
+# since every anchor here is vivid rather than just the two endpoints.
+BARRA_NEG, BARRA_POS = "#7B241C", "#145A32"
+_BARRA_BAND_COLORS = [
+    "#7B241C",  # darkest red
+    "#C0392B",  # dark red
+    "#E74C3C",  # red
+    "#E67E22",  # orange
+    "#F39C12",  # amber
+    "#F1C40F",  # yellow
+    "#9ACD32",  # yellow-green
+    "#27AE60",  # green
+    "#1E8449",  # dark green
+    "#145A32",  # darkest green
+]
+BARRA_SCALE = [
+    [_i / (len(_BARRA_BAND_COLORS) - 1), _c] for _i, _c in enumerate(_BARRA_BAND_COLORS)
+]
 
 _FREQ_LABELS = {"B": "Daily", "W-FRI": "Weekly", "ME": "Monthly"}
 #: Poll cadence: brisk while something is running, near-idle otherwise.
@@ -245,18 +271,21 @@ def _hbar(
     xtitle: str = "Exposure (z-score)",
     height: int | None = None,
     fmt: str = "{:+.2f}",
+    pos_color: str | None = None,
+    neg_color: str | None = None,
 ) -> go.Figure:
     """Diverging horizontal bars with direct labels: the workhorse of this page."""
     s = series.dropna().sort_values()
     if s.empty:
         return _fig(go.Figure(), title, "No data")
+    pos_c, neg_c = pos_color or POS, neg_color or NEG
     fig = go.Figure(
         go.Bar(
             y=s.index.tolist(),
             x=s.values,
             orientation="h",
             marker=dict(
-                color=[POS if v >= 0 else NEG for v in s.values],
+                color=[pos_c if v >= 0 else neg_c for v in s.values],
                 line=dict(width=2, color="#FFFFFF"),
             ),
             text=[fmt.format(v) for v in s.values],
@@ -374,6 +403,7 @@ def _heatmap(
     height: int | None = None,
     zmax: float | None = None,
     colorbar_title: str = "",
+    colorscale=None,
 ) -> go.Figure:
     values = frame.to_numpy(dtype=float)
     finite = values[np.isfinite(values)]
@@ -383,7 +413,7 @@ def _heatmap(
             z=values,
             x=[str(c) for c in frame.columns],
             y=[str(i) for i in frame.index],
-            colorscale=DIVERGING,
+            colorscale=colorscale or DIVERGING,
             zmid=0,
             zmin=-lim,
             zmax=lim,
@@ -539,7 +569,9 @@ def _config_form() -> dmc.Stack:
                     dmc.NumberInput(
                         id="fs-minhist",
                         label="Min history (days)",
-                        value=250,
+                        description="Below this, a security is dropped from every "
+                        "run regardless of style selection",
+                        value=150,
                         min=40,
                         max=2000,
                         step=10,
@@ -779,6 +811,29 @@ def layout():
                         "portfolio",
                         "How to read the portfolio exposures",
                         txt.READING_EXPOSURES + "\n\n---\n\n" + txt.RISK_DECOMPOSITION,
+                        extra=[
+                            dmc.Group(
+                                [
+                                    dmc.DatePickerInput(
+                                        id="fs-portfolio-date",
+                                        type="range",
+                                        label="Barra: from — to",
+                                        description="Timeframe for the tilt & GICS "
+                                        "breakdown below — a single date is a snapshot; "
+                                        "a range averages Z-scores across it. Defaults "
+                                        "to the run's latest date.",
+                                        placeholder="Latest date only",
+                                        clearable=True,
+                                        w=260,
+                                    ),
+                                    ui.export_button(
+                                        "fs-portfolio-export", "Export Portfolio Report"
+                                    ),
+                                ],
+                                align="end",
+                                gap="md",
+                            ),
+                        ],
                     ),
                     _tab_panel(
                         "whatif",
@@ -1225,7 +1280,7 @@ def _submit(
         country_factors=bool(country),
         robust=bool(robust),
         max_securities=int(maxsec or 0),
-        min_history_days=int(minhist or 250),
+        min_history_days=int(minhist or 150),
         regression_weight=weight or "sqrt_cap",
         winsor_sigma=float(winsor or 3.0),
         min_coverage=float(cover or 0.5),
@@ -1366,12 +1421,141 @@ def _styles_only(series: pd.Series, bundle: dict) -> pd.Series:
     return out
 
 
+def _exposures_for_window(run_id: str, start, end) -> pd.DataFrame:
+    """Style-factor exposures averaged over every date in [start, end] — the
+    range generalisation of fstore.exposure_snapshot's single-date read.
+    Mirrors the old (pre-refactor) Barra page's "Monthly" mode, which
+    averaged daily Z-scores across a chosen window rather than reading one
+    day. security_id x factor, like exposure_snapshot.
+    """
+    long = fstore.load_exposures(run_id, factors=tuple(STYLES))
+    if long.empty:
+        return pd.DataFrame()
+    mask = (long["date"] >= pd.Timestamp(start)) & (long["date"] <= pd.Timestamp(end))
+    windowed = long[mask]
+    if windowed.empty:
+        return pd.DataFrame()
+    return windowed.groupby(["security_id", "factor"])["value"].mean().unstack()
+
+
+def _resolve_barra_range(run_id: str, date_range) -> tuple[str, str, str]:
+    """(start, end, label) from the range picker's value — [start, end],
+    a partial [start, None]/[None, end], or None. Falls back to the run's
+    latest date on either side, so a single date collapses to a snapshot.
+    """
+    bundle = _bundle(run_id)
+    latest = bundle["manifest"].get("summary", {}).get("last_cross_section")
+    start, end = (date_range or (None, None))[:2]
+    end = end or latest
+    start = start or end
+    label = str(start) if start == end else f"{start} → {end}"
+    return start, end, label
+
+
+def _barra_data(run_id: str, date_range) -> dict:
+    """Style-factor exposures, GICS sector breakdown and portfolio tilt for a
+    date or date range within a run's estimation window — the two visuals
+    ported from the old (pre-refactor) Barra page. A single date reads one
+    cross-section (fstore.exposure_snapshot); a genuine range averages
+    Z-scores across every date in it (_exposures_for_window), same as the
+    old page's Daily vs Monthly modes. Shared by the Portfolio tab's display
+    and its export button so both read exactly the same numbers.
+    """
+    bundle = _bundle(run_id)
+    start, end, period = _resolve_barra_range(run_id, date_range)
+    exposures = (fstore.exposure_snapshot(run_id, end) if start == end
+                else _exposures_for_window(run_id, start, end))
+    style_cols = [k for k in STYLES if k in exposures.columns]
+    label_of = {k: STYLES[k].label for k in style_cols}
+    out = {
+        "as_of": period, "start": start, "end": end,
+        "style_cols": style_cols, "label_of": label_of,
+        "sector_avg": pd.DataFrame(), "n_sector_securities": 0,
+        "tilt": pd.Series(dtype=float), "positions": pd.DataFrame(),
+        "n_covered": 0, "covered_pct": 0.0,
+    }
+    if exposures.empty or not style_cols:
+        return out
+
+    meta = bundle["meta"]
+    sector_of = meta["sector"] if not meta.empty and "sector" in meta.columns else pd.Series(dtype=str)
+    ticker_of = meta["ticker"] if not meta.empty and "ticker" in meta.columns else pd.Series(dtype=str)
+
+    if not sector_of.empty:
+        sec = exposures[style_cols].join(sector_of.rename("sector"), how="inner")
+        sec = sec[~sec["sector"].isin(["Unclassified", "Other", ""])]
+        if not sec.empty:
+            out["sector_avg"] = sec.groupby("sector")[style_cols].mean().rename(columns=label_of)
+            out["n_sector_securities"] = int(len(sec))
+
+    weights, _ = _weights_for_run(run_id)
+    if not weights.empty:
+        covered = weights.index.intersection(exposures.index)
+        if not covered.empty:
+            out["tilt"] = riskmod.portfolio_exposure(
+                weights, exposures[style_cols]).rename(index=label_of)
+            out["n_covered"] = int(len(covered))
+            out["covered_pct"] = float(weights.loc[covered].sum())
+            pos = exposures.loc[covered, style_cols].rename(columns=label_of)
+            pos.index = [ticker_of.get(sid, sid) for sid in pos.index]
+            out["positions"] = pos
+    return out
+
+
+def _barra_children(barra: dict) -> list:
+    """Render _barra_data() as the page's Dash components — shared between
+    the live tab and (indirectly, for the figures) the export button.
+    """
+    period = barra["as_of"]
+    is_range = barra["start"] != barra["end"]
+    when = f"Averaged {period}" if is_range else f"As of {period}"
+    children = [
+        ui.section("Barra: Factor Tilts & GICS Sector Breakdown"),
+        dcc.Markdown(
+            f"{when} · style-factor Z-scores only, not risk-weighted "
+            "— the classic Barra read, independent of the risk decomposition above. "
+            "Pick a date, or a **from — to** range to average across, in "
+            "**Barra: from — to** to move this section only.",
+            className="explain-body",
+        ),
+    ]
+    if not barra["sector_avg"].empty:
+        children.append(_graph(_heatmap(
+            barra["sector_avg"], "Factor Exposures by GICS Sector",
+            f"{when} · {barra['n_sector_securities']} securities classified",
+            height=max(380, 40 * len(barra["sector_avg"]) + 140),
+            colorscale=BARRA_SCALE,
+        )))
+    else:
+        children.append(ui.alert("No GICS-classified securities in this run.", "blue"))
+
+    if not barra["tilt"].empty:
+        children.append(_graph(_hbar(
+            barra["tilt"], "Portfolio Factor Tilts",
+            f"{when} · {barra['n_covered']} positions · "
+            f"{_pct(barra['covered_pct'])} of NAV covered",
+            pos_color=BARRA_POS, neg_color=BARRA_NEG,
+        )))
+    if not barra["positions"].empty:
+        children.append(_graph(_heatmap(
+            barra["positions"], "Style Factor Exposures — Individual Positions",
+            when,
+            height=max(380, 40 * len(barra["positions"]) + 140),
+            colorscale=BARRA_SCALE,
+        )))
+    if barra["tilt"].empty and barra["positions"].empty:
+        children.append(ui.alert(
+            "None of the current positions are covered by this run at this date.", "yellow"))
+    return children
+
+
 @callback(
     Output("fs-portfolio-content", "children"),
     Input("fs-run", "value"),
     Input("fs-tabs", "value"),
+    Input("fs-portfolio-date", "value"),
 )
-def _portfolio_tab(run_id, tab):
+def _portfolio_tab(run_id, tab, barra_range):
     if tab != "portfolio":
         return no_update
     if not run_id:
@@ -1524,9 +1708,120 @@ def _portfolio_tab(run_id, tab):
             ),
             ui.section("Contribution by position"),
             _table(table.round(4), id="fs-positions-table", page_size=20),
+            dmc.Divider(mt="lg"),
+            *_barra_children(_barra_data(run_id, barra_range)),
         ],
         gap="sm",
     )
+
+
+def _barra_report_readme(run_id: str, barra: dict) -> str:
+    manifest = fstore.load_manifest(run_id) or {}
+    spec = manifest.get("spec", {})
+    is_range = barra["start"] != barra["end"]
+    when_label = "Averaged over" if is_range else "As of"
+    return f"""Barra Portfolio Report
+Model run   : {run_id}  ({spec.get('name', 'run')}, {spec.get('frequency', '')})
+{when_label:<12}: {barra['as_of']}
+Positions   : {barra['n_covered']} covered, {_pct(barra['covered_pct'])} of NAV
+
+FILES
+-----
+sector_exposures.png / .csv
+    Style-factor Z-scores by GICS sector, {"averaged over the date range" if is_range else "as of the date"}
+    above. A range averages each security's daily Z-score across every date
+    in it before grouping by sector (same as the old Barra page's "Monthly"
+    mode, generalised to any range). "Unclassified"/"Other" sectors (mostly
+    ETFs — no native GICS sector) are excluded from the average.
+
+portfolio_tilts.png / .csv
+    The portfolio's weighted-average exposure (Z-score) to each style
+    factor: exposure_matrix.T . weights, renormalised to the covered book
+    (see capital.analytics.factors.risk.portfolio_exposure). Unlike the
+    "Portfolio style exposures" chart on the Factor Screen tab, this is not
+    cap-weighted-market-neutral and does not need the run's covariance
+    matrix — it is the direct style tilt, same definition as the old
+    (pre-refactor) Barra page.
+
+position_exposures.png / .csv
+    Style-factor Z-scores for each currently-held, model-covered position.
+
+Read Factor Screen's Portfolio tab for the fuller risk decomposition
+(volatility attribution, factor covariance) — this report covers only the
+Barra-style tilt and sector view, both scoped to the "as of" date above.
+"""
+
+
+def _fig_png(fig: go.Figure) -> bytes | None:
+    try:
+        return fig.to_image(format="png", scale=2)
+    except Exception as exc:  # noqa: BLE001 — kaleido/Chrome hiccups shouldn't kill the export
+        print(f"[factor-screen] PNG export failed: {exc}")
+        return None
+
+
+@callback(
+    Output("fs-portfolio-export-download", "data"),
+    Input("fs-portfolio-export", "n_clicks"),
+    State("fs-run", "value"),
+    State("fs-portfolio-date", "value"),
+    prevent_initial_call=True,
+)
+def export_portfolio_report(n_clicks, run_id, barra_range):
+    if not n_clicks or not run_id:
+        return no_update
+    barra = _barra_data(run_id, barra_range)
+    is_range = barra["start"] != barra["end"]
+    when = f"Averaged {barra['as_of']}" if is_range else f"As of {barra['as_of']}"
+
+    files: dict[str, bytes] = {}
+
+    if not barra["sector_avg"].empty:
+        fig = _heatmap(
+            barra["sector_avg"], "Factor Exposures by GICS Sector",
+            f"{when} · {barra['n_sector_securities']} securities classified",
+            height=max(380, 40 * len(barra["sector_avg"]) + 140), colorscale=BARRA_SCALE,
+        )
+        png = _fig_png(fig)
+        if png:
+            files["sector_exposures.png"] = png
+        files["sector_exposures.csv"] = barra["sector_avg"].to_csv().encode()
+
+    if not barra["tilt"].empty:
+        fig = _hbar(
+            barra["tilt"], "Portfolio Factor Tilts",
+            f"{when} · {barra['n_covered']} positions · "
+            f"{_pct(barra['covered_pct'])} of NAV covered",
+            pos_color=BARRA_POS, neg_color=BARRA_NEG,
+        )
+        png = _fig_png(fig)
+        if png:
+            files["portfolio_tilts.png"] = png
+        files["portfolio_tilts.csv"] = barra["tilt"].rename("z_score").to_csv().encode()
+
+    if not barra["positions"].empty:
+        fig = _heatmap(
+            barra["positions"], "Style Factor Exposures — Individual Positions",
+            when,
+            height=max(380, 40 * len(barra["positions"]) + 140), colorscale=BARRA_SCALE,
+        )
+        png = _fig_png(fig)
+        if png:
+            files["position_exposures.png"] = png
+        files["position_exposures.csv"] = barra["positions"].to_csv().encode()
+
+    if not files:
+        return no_update
+
+    files["README.txt"] = _barra_report_readme(run_id, barra).encode()
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for name, data in files.items():
+            zf.writestr(name, data)
+    fname_period = (barra["start"] if not is_range else f"{barra['start']}_to_{barra['end']}")
+    fname = f"barra_portfolio_report_{fname_period}.zip"
+    return dcc.send_bytes(lambda f, d=buf.getvalue(): f.write(d), fname)
 
     # ── What-if tab ───────────────────────────────────────────────────────────────
 

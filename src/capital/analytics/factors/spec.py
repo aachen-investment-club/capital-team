@@ -227,7 +227,10 @@ class ModelSpec:
     asset_types: tuple[str, ...] = ("COMMON",)      # estimation universe
     include_etfs: bool = True            # priced off the model by time-series regression
     min_market_cap: float = 0.0          # in units of the fundamentals column
-    min_history_days: int = 250          # statistical floor, not a universe cap
+    min_history_days: int = 150          # statistical floor, not a universe cap; lowered
+                                          # from 250 so recently-listed but still-held
+                                          # positions (~7 months of history) aren't
+                                          # silently dropped from every run
     max_securities: int = 0              # 0 = no cap; the whole master is used
 
     # Estimation
