@@ -300,7 +300,14 @@ def _normalise_eod(df: pd.DataFrame, ric: str, ric_to_id: dict) -> pd.DataFrame 
 
 
 def _split_response(raw: pd.DataFrame, batch: list[str]) -> dict[str, pd.DataFrame]:
-    """LSEG returns MultiIndex columns (multi-RIC) or a flat frame (single RIC)."""
+    """LSEG returns MultiIndex columns (multi-field), a flat frame (single RIC),
+    or — a single field requested for several RICs — a flat frame whose columns
+    are the RIC names with no field level at all. That last shape used to fall
+    through every branch and silently return {}: a field alone in its request
+    group (as `eps_ttm` always is — 13 fields batched 4-at-a-time leaves it as
+    the sole member of the last group) would never get parsed, no matter how
+    much data LSEG returned.
+    """
     per_ric: dict[str, pd.DataFrame] = {}
     if isinstance(raw.columns, pd.MultiIndex):
         for ric in raw.columns.get_level_values(0).unique():
@@ -310,6 +317,10 @@ def _split_response(raw: pd.DataFrame, batch: list[str]) -> dict[str, pd.DataFra
             per_ric[str(ric)] = raw.xs(ric, level=0)
     elif len(batch) == 1:
         per_ric[batch[0]] = raw
+    elif set(raw.columns) & set(batch):
+        for ric in raw.columns:
+            if ric in batch:
+                per_ric[str(ric)] = raw[[ric]]
     return per_ric
 
 
