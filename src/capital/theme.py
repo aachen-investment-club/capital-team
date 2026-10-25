@@ -31,6 +31,26 @@ _PALETTE = [
     "#94A3B8",  # pale slate        — 10th series
 ]
 
+# ── Factor-exposure palette (Barra traffic light) ───────────────────────────
+# The classic red/orange/yellow/green/dark-green read for factor exposures and
+# returns: 10 fully-saturated anchors interpolated continuously (no hard edges),
+# without RdYlGn's washed-out pale midpoint. Shared by the Factor Screen's Barra
+# section and the Control Panel so a factor reads the same colour on both pages.
+BARRA_NEG, BARRA_POS = "#7B241C", "#145A32"   # solid bar colours: dark red / dark green
+BARRA_BAND_COLORS = [
+    "#7B241C",  # darkest red
+    "#C0392B",  # dark red
+    "#E74C3C",  # red
+    "#E67E22",  # orange
+    "#F39C12",  # amber
+    "#F1C40F",  # yellow
+    "#9ACD32",  # yellow-green
+    "#27AE60",  # green
+    "#1E8449",  # dark green
+    "#145A32",  # darkest green
+]
+BARRA_SCALE = [[i / (len(BARRA_BAND_COLORS) - 1), c] for i, c in enumerate(BARRA_BAND_COLORS)]
+
 # ── Plotly template ──────────────────────────────────────────────────────────
 _TEMPLATE = go.layout.Template(
     layout=dict(

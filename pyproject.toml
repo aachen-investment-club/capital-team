@@ -33,6 +33,7 @@ dependencies = [
     "pykalman>=0.9.7",
     "filterpy>=1.4.5",
     "kaleido>=1.4.0",
+    "hmmlearn>=0.3.2",
 ]
 
 [project.scripts]

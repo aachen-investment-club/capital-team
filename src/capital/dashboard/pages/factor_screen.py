@@ -41,7 +41,7 @@ from capital.data import factor_store as fstore
 from capital.data import loaders
 from capital.data.cache import cached_by_version
 from capital.jobs import queue as jobs
-from capital.theme import BORDER, GRAPH_CONFIG, NAVY, TEXT_MUTED
+from capital.theme import BARRA_NEG, BARRA_POS, BARRA_SCALE, BORDER, GRAPH_CONFIG, NAVY, TEXT_MUTED
 
 dash.register_page(
     __name__,
@@ -61,29 +61,10 @@ DIVERGING = [[0.0, "#1E3A5F"], [0.25, NEG], [0.5, MID], [0.75, POS], [1.0, "#7A6
 SERIES = ["#0C1E40", "#B8962E", "#2E7D6B", "#8B2E4A", "#3A6B9C"]
 MAX_SERIES = 5
 
-# Barra sub-section only (tilts, GICS breakdown): the classic red/orange/
-# yellow/green/dark-green traffic-light read. Kept separate from DIVERGING
-# above, which stays steel-blue/gold everywhere else on this page for the
-# colour-vision-deficiency separation it's chosen for.
-# 10 fully-saturated anchor colours, interpolated continuously between them
-# (no hard edges) — smooth, but without RdYlGn's washed-out pale midpoint,
-# since every anchor here is vivid rather than just the two endpoints.
-BARRA_NEG, BARRA_POS = "#7B241C", "#145A32"
-_BARRA_BAND_COLORS = [
-    "#7B241C",  # darkest red
-    "#C0392B",  # dark red
-    "#E74C3C",  # red
-    "#E67E22",  # orange
-    "#F39C12",  # amber
-    "#F1C40F",  # yellow
-    "#9ACD32",  # yellow-green
-    "#27AE60",  # green
-    "#1E8449",  # dark green
-    "#145A32",  # darkest green
-]
-BARRA_SCALE = [
-    [_i / (len(_BARRA_BAND_COLORS) - 1), _c] for _i, _c in enumerate(_BARRA_BAND_COLORS)
-]
+# Barra sub-section only (tilts, GICS breakdown): the red-to-green traffic-light
+# palette from capital.theme (BARRA_SCALE / BARRA_POS / BARRA_NEG). Kept separate
+# from DIVERGING above, which stays steel-blue/gold everywhere else on this page
+# for the colour-vision-deficiency separation it is chosen for.
 
 _FREQ_LABELS = {"B": "Daily", "W-FRI": "Weekly", "ME": "Monthly"}
 #: Poll cadence: brisk while something is running, near-idle otherwise.

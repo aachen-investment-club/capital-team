@@ -19,6 +19,11 @@ from capital.settings import settings
 log = logging.getLogger(__name__)
 
 MARKET_TICKERS = ["SPY", "IWM", "TLT", "HYG", "QQQ", "GLD"]
+# SPDR sector ETFs for the control panel's S&P 500 sector breakdown. New tickers
+# only get LOOKBACK_DAYS of history from the nightly run; back-fill them once
+# with `capital-ingest market --days 3700`.
+SECTOR_ETFS = ["XLK", "XLC", "XLY", "XLF", "XLV", "XLI", "XLP", "XLE", "XLU", "XLB", "XLRE"]
+MARKET_TICKERS += SECTOR_ETFS
 VIX_TICKER = "^VIX"                       # stored as VIX
 FRED_SERIES = {"BAMLH0A0HYM2": "HY_OAS"}  # {fred_id: friendly_name}
 
