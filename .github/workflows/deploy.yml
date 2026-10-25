@@ -16,8 +16,8 @@ jobs:
           uv run python -c "
           import capital.dashboard.app, dash
           paths = {p['path'] for p in dash.page_registry.values()}
-          assert len(dash.page_registry) == 10, sorted(paths)
-          assert '/factor-screen' in paths, sorted(paths)
+          assert len(dash.page_registry) == 12, sorted(paths)
+          assert {'/factor-screen', '/control-panel', '/market-regime'} <= paths, sorted(paths)
           "
           uv run python -c "
           from capital.analytics.factors.model import run_factor_model
