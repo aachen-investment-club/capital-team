@@ -388,7 +388,6 @@ LIMITS = {
     "drawdown": -0.10,          # fund drawdown beyond 10%
     "vol_pct": 0.80,            # GARCH vol above its own 80th percentile
     "vol_expansion": 1.5,       # 21d realised above 1.5x the 252d realised
-    "bear_proba": 0.50,         # HMM puts >50% on Bear
     "regime_flip_days": 5,      # regime changed within the last week
     "exposure_z": 0.5,          # |active exposure| worth flagging
     "stale_bdays": 3,           # data older than 3 business days
@@ -453,13 +452,17 @@ def build_alerts(*, today: pd.Timestamp, regime: dict | None, vol: dict | None,
                     ts + pd.offsets.BDay(L["stale_bdays"]))
 
     if regime:
-        cur, state = regime["current"], regime["state"]
-        run_start = _streak_start(state == cur["state"])
-        if cur["proba"].get("Bear", 0) > L["bear_proba"]:
-            add("red", "Bear regime", f"HMM puts {cur['proba']['Bear']:.0%} on Bear.", run_start)
-        if cur["days_in_regime"] <= L["regime_flip_days"]:
-            add("orange", f"Regime change → {cur['state']}",
-                f"Switched {cur['days_in_regime']}d ago; new regimes are the least certain.", run_start)
+        # The champion regime: direction (Kalman slope) and volatility (GARCH nowcast).
+        cur, state, vol_state = regime["current"], regime["state"], regime["vol_state"]
+        run_start = _streak_start(state == cur["direction"])
+        if cur["direction"] == "Bear":
+            add("red", "Bear regime", f"SPY trend slope {cur['slope']:+.0%}/yr, below the Bear line.", run_start)
+        if cur["days_direction"] <= L["regime_flip_days"]:
+            add("orange", f"Regime change → {cur['direction']}",
+                f"Switched {cur['days_direction']}d ago; trend slope {cur['slope']:+.0%}/yr.", run_start)
+        if cur["volatility"] == "Turbulent":
+            add("orange", "Turbulent regime", f"SPY vol nowcast {cur['vol_nowcast']:.0%}.",
+                _streak_start(vol_state == "Turbulent"))
 
     if vol:
         g = vol["garch"]

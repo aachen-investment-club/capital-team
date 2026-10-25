@@ -5,7 +5,7 @@ One box per theme, chart-first: each box leads with a chart and keeps its
 numbers to a compact stat strip, and its explanation sits behind an ℹ icon in
 the header rather than taking vertical space.
 
-Every box reads through version-keyed caches, so the HMM and GARCH fits run once
+Every box reads through version-keyed caches, so the regime and GARCH fits run once
 per data version (after the nightly ingest) and every later page load is a cache
 hit. Each box has its own callback: one failing input (say, S3 being down for the
 position weights) costs that box, not the page.
@@ -21,6 +21,7 @@ from dash import Input, Output, callback, dcc, html
 
 from capital.analytics import control_panel as cp
 from capital.analytics import regime as rg
+from capital.analytics.regime import champion as ch
 from capital.analytics.factors import regression as reg
 from capital.analytics.factors import risk as riskmod
 from capital.analytics.factors.risk import periods_per_year
@@ -34,7 +35,7 @@ from capital.theme import BARRA_NEG, BARRA_POS, BARRA_SCALE, GRAPH_CONFIG, NAVY,
 
 dash.register_page(
     __name__, path="/control-panel", name="Control Panel", order=0.5,
-    description="Market regime (HMM), GARCH volatility, leading strategies and "
+    description="Market regime (champion: Kalman trend × GJR-GARCH), GARCH volatility, leading strategies and "
                 "sectors, portfolio outlook, movers, risk and alerts on one screen.",
 )
 
@@ -150,9 +151,12 @@ def _spy_returns() -> pd.Series:
 
 
 @cached_by_version
-def _regime() -> dict:
-    """The HMM fit — ~10s, so it runs once per data version, never per page load."""
-    return rg.fit_regime_model(_spy_returns())
+def _champion_regime() -> dict:
+    """The champion regime on SPY (Kalman trend slope × GJR-GARCH vol nowcast).
+    The yearly GARCH refits cost ~1s, so it runs once per data version."""
+    reg = ch.classify(loaders.get_market_prices("SPY")).dropna(subset=["direction", "volatility"])
+    return {"reg": reg, "state": reg["direction_name"], "vol_state": reg["volatility_name"],
+            "current": ch.current_state(reg)}
 
 
 @cached_by_version
@@ -289,7 +293,8 @@ def layout():
                 dmc.Title("Control Panel", order=3, c=NAVY),
                 _info("One-screen overview. Every 'this month' number is a rolling 21 trading "
                       "day lookback, judged against the 252-day (one year) equivalent. "
-                      "Benchmark: SPY. Regime: 3-state HMM on SPY. Volatility: GJR-GARCH. "
+                      "Benchmark: SPY. Regime: champion model on SPY (Kalman trend × GJR-GARCH; "
+                      "compare models on the Market Regime page). Volatility: GJR-GARCH. "
                       "Outlook: Kalman trend on the fund NAV. Hover the ℹ on any box for its method."),
             ], gap=6),
             dcc.Loading(html.Div(id="cp-freshness"), delay_show=300),
@@ -496,8 +501,21 @@ behind, its own trend.
 
 # ── Regime detector ───────────────────────────────────────────────────────────
 
-#: The chart's lookback. The model itself is fitted on SPY's full history.
+#: The chart's lookback. The model itself runs on SPY's full history.
 _REGIME_DAYS = cp.LONG
+_C = ch.CHAMPION
+
+
+def _regime_bands(fig: go.Figure, labels: pd.Series, colors: dict, row: int, secondary_y=None) -> None:
+    """One full-height bar per day on a hidden 0–1 axis, coloured by that day's
+    label. Bars (not shapes) so the shading is exact per day and survives the
+    weekend rangebreaks without gaps."""
+    for s, color in colors.items():
+        on = (labels == s).astype(float).replace(0.0, np.nan)
+        kw = {"secondary_y": secondary_y} if secondary_y is not None else {}
+        fig.add_trace(go.Bar(x=labels.index, y=on, name=s, marker_color=color, opacity=0.28,
+                             hoverinfo="skip", width=86_400_000, showlegend=row == 1),
+                      row=row, col=1, **kw)
 
 
 @callback(Output("cp-regime", "children"), Input("cp-init", "data"))
@@ -505,94 +523,92 @@ def _regime_box(_):
     try:
         from plotly.subplots import make_subplots
 
-        res = _regime()
-        cur, params = res["current"], res["params"]
-        proba = res["proba"].tail(_REGIME_DAYS)
-        state = res["state"].reindex(proba.index)
-        spy = loaders.get_market_prices("SPY").reindex(proba.index).ffill()
+        res = _champion_regime()
+        cur = res["current"]
+        reg = res["reg"].tail(_REGIME_DAYS)
+        state, vol_state = reg["direction_name"], reg["volatility_name"]
+        spy = loaders.get_market_prices("SPY").reindex(reg.index).ffill()
 
-        # Row 1: SPY price over regime shading. Row 2: state probabilities.
-        fig = make_subplots(rows=2, cols=1, shared_xaxes=True, row_heights=[0.7, 0.3],
-                            vertical_spacing=0.03, specs=[[{"secondary_y": True}], [{}]])
-        # Shading: one full-height bar per day on a hidden 0–1 axis, coloured by
-        # that day's most likely state. Bars (not shapes) so the shading is exact
-        # per day and survives the weekend rangebreaks without gaps.
-        for s in rg.STATES:
-            on = (state == s).astype(float).replace(0.0, np.nan)
-            fig.add_trace(go.Bar(x=proba.index, y=on, name=s, marker_color=rg.STATE_COLORS[s],
-                                 opacity=0.28, hoverinfo="skip", width=86_400_000),
-                          row=1, col=1, secondary_y=False)
+        # Row 1: SPY over direction shading. Row 2: the trend slope against the
+        # Bull / Bear lines. Row 3: the vol nowcast over volatility shading.
+        fig = make_subplots(rows=3, cols=1, shared_xaxes=True, row_heights=[0.56, 0.22, 0.22],
+                            vertical_spacing=0.03, specs=[[{"secondary_y": True}], [{}], [{"secondary_y": True}]])
+        _regime_bands(fig, state, rg.STATE_COLORS, 1, secondary_y=False)
         fig.add_trace(go.Scatter(
             x=spy.index, y=spy, name="SPY", line=dict(color=NAVY, width=1.8), showlegend=False,
-            customdata=state.to_numpy(),
-            hovertemplate="%{x|%d %b %Y}  SPY %{y:.2f}<br>%{customdata}<extra></extra>"),
+            customdata=np.column_stack([state, vol_state]),
+            hovertemplate="%{x|%d %b %Y}  SPY %{y:.2f}<br>%{customdata[0]} · %{customdata[1]}<extra></extra>"),
             row=1, col=1, secondary_y=True)
 
-        # Probabilities as a 100% stacked area in the state colours: the share of
-        # each colour is how sure the model is, so a regime building or fading
-        # shows as a band swelling or thinning rather than as cells switching.
-        for s in ("Bear", "Sideways", "Bull"):
-            fig.add_trace(go.Scatter(
-                x=proba.index, y=proba[s], name=s, showlegend=False, stackgroup="proba",
-                mode="lines", line=dict(width=0.6, color=rg.STATE_COLORS[s], shape="spline", smoothing=0.6),
-                fillcolor=rg.STATE_COLORS[s], opacity=0.9,
-                hovertemplate=f"%{{x|%d %b %Y}}  {s}: %{{y:.0%}}<extra></extra>"), row=2, col=1)
-        fig.add_hline(y=0.5, line_dash="dot", line_color="white", line_width=1, row=2, col=1)
+        fig.add_trace(go.Scatter(
+            x=reg.index, y=reg["slope"], name="Trend slope", showlegend=False,
+            line=dict(color=NAVY, width=1.4),
+            hovertemplate="%{x|%d %b %Y}  slope %{y:+.0%}/yr<extra></extra>"), row=2, col=1)
+        for line, color in ((_C.bull_slope, rg.STATE_COLORS["Bull"]), (_C.bear_slope, rg.STATE_COLORS["Bear"])):
+            fig.add_hline(y=line, line_dash="dot", line_color=color, line_width=1, row=2, col=1)
+
+        _regime_bands(fig, vol_state, ch.VOL_COLORS, 3, secondary_y=False)
+        fig.add_trace(go.Scatter(
+            x=reg.index, y=reg["vol_nowcast"], name="Vol nowcast", showlegend=False,
+            line=dict(color=NAVY, width=1.4),
+            hovertemplate="%{x|%d %b %Y}  vol %{y:.0%}<extra></extra>"), row=3, col=1, secondary_y=True)
 
         fig.update_layout(barmode="overlay", bargap=0, legend=dict(traceorder="normal"))
         fig.update_yaxes(range=[0, 1], visible=False, row=1, col=1, secondary_y=False)
+        fig.update_yaxes(range=[0, 1], visible=False, row=3, col=1, secondary_y=False)
         lo, hi = float(spy.min()), float(spy.max())
         pad = (hi - lo) * 0.05
         fig.update_yaxes(range=[lo - pad, hi + pad], side="left", showgrid=True, tickprefix="$",
                          row=1, col=1, secondary_y=True)
-        fig.update_yaxes(range=[0, 1], tickvals=[0, 0.5, 1], tickformat=".0%", showgrid=False,
-                         tickfont=dict(size=9), title_text="prob.", row=2, col=1)
+        fig.update_yaxes(tickformat="+.0%", showgrid=False, title_text="slope", row=2, col=1)
+        fig.update_yaxes(tickformat=".0%", showgrid=False, side="left", title_text="vol",
+                         row=3, col=1, secondary_y=True)
         # Skip weekends and market holidays (weekdays with no SPY close), so the
         # shading runs unbroken from one trading day to the next.
-        holidays = pd.bdate_range(proba.index[0], proba.index[-1]).difference(proba.index)
+        holidays = pd.bdate_range(reg.index[0], reg.index[-1]).difference(reg.index)
         fig.update_xaxes(rangebreaks=[dict(bounds=["sat", "mon"]),
                                       dict(values=[d.strftime("%Y-%m-%d") for d in holidays])],
                          showgrid=False)
 
-        ahead = cur["proba_21d"]
-        badge = dmc.Badge(f"{cur['state']} · {cur['proba'][cur['state']]:.0%}", variant="filled",
-                          color={"Bull": "teal", "Sideways": "blue", "Bear": "red"}[cur["state"]], size="md")
+        d, v = cur["direction"], cur["volatility"]
+        badge = dmc.Badge(f"{d} · {v}", variant="filled",
+                          color={"Bull": "teal", "Sideways": "blue", "Bear": "red"}[d], size="md")
         stats = _stats([
-            ("In regime", f"{cur['days_in_regime']}d", f"typical {params.loc[cur['state'], 'exp_duration_d']:.0f}d"),
-            ("Still in 21d", f"{ahead[cur['state']]:.0%}", "A²¹ from today"),
-            ("Bull / Side / Bear", " / ".join(f"{cur['proba'][s]:.0%}" for s in rg.STATES), "today"),
-            ("Bear in 21d", f"{ahead['Bear']:.0%}", "probability", NEG if ahead["Bear"] > 0.3 else NAVY),
-            ("Regime vol", f"{params.loc[cur['state'], 'ann_vol_pct']:.0f}%",
-             f"ann. ret {params.loc[cur['state'], 'ann_ret_pct']:+.0f}%"),
+            ("Direction", d, f"{cur['days_direction']}d in regime", rg.STATE_COLORS[d]),
+            ("Trend slope", f"{cur['slope']:+.0%} / yr",
+             f"{cur['flip_distance']:+.0%} to {cur['nearest_flip']}"),
+            ("Volatility", v, f"{cur['days_volatility']}d in regime", ch.VOL_COLORS[v]),
+            ("Vol nowcast", f"{cur['vol_nowcast']:.0%}",
+             f"calm < {_C.calm_below:.0%} · turbulent > {_C.turbulent_above:.0%}"),
+            ("Lines", f"{_C.bull_slope:+.0%} / {_C.bear_slope:+.0%}", f"Bull / Bear, ±{_C.band:.1%} band"),
         ], cols={"base": 3, "sm": 5})
-        return _box("Regime detector", dmc.Stack([stats, _graph(fig, 300, legend=True, left=46, right=8)], gap=2),
-                    f"3-state HMM on SPY, last {_REGIME_DAYS} days · {_date(cur['date'])}",
-                    _REGIME_TEXT, right=badge)
+        return _box("Regime detector", dmc.Stack([stats, _graph(fig, 330, legend=True, left=46, right=8)], gap=2),
+                    f"champion model on SPY, last {_REGIME_DAYS} days · {_date(cur['date'])}",
+                    _REGIME_TEXT, right=dcc.Link(badge, href="/market-regime"))
     except Exception:  # noqa: BLE001
         return _fail("Regime detector")
 
 
-_REGIME_TEXT = r"""
-A hidden Markov model assumes the market switches between three unobserved
-states, each with its own distribution of daily SPY return and 21-day realised
-volatility. It is fitted with EM (`hmmlearn`, six random restarts, the best
-log-likelihood kept) on SPY's full history; the chart shows the last 252 trading days.
+_REGIME_TEXT = rf"""
+The champion regime model classifies every day on two axes, using SPY prices up
+to that day's close only, so every band is what you could have known at the time.
 
-- **Bands** behind the price are the most likely state each day: green Bull,
-  blue Sideways, red Bear.
-- **Probability band** underneath: each state's probability per day, stacked to
-  100% in the same colours. A colour widening means the model is growing more
-  sure of that regime; the dotted line marks 50%.
-- **Labels** are assigned after every fit by mean return (highest = Bull,
-  lowest = Bear), so they mean the same thing night after night.
-- **Probabilities are filtered**: each day uses data up to that day only (the
-  forward algorithm), so the bands are what you could have known at the time.
-- **Typical length** is $1/(1-p_{ii})$; **still in 21d** is today's
-  probabilities times $A^{21}$.
+- **Direction** (top bands, middle panel): a local-linear-trend Kalman filter on
+  log price estimates the current drift. Annualised, **Bull** above
+  {_C.bull_slope:+.0%}/yr, **Bear** below {_C.bear_slope:+.0%}/yr, **Sideways**
+  in between (dotted lines). A state changes only once the slope is
+  {_C.band:.1%}/yr past a line, so the label does not flicker.
+- **Volatility** (bottom panel): GJR-GARCH(1,1)-t, refitted every January on
+  all earlier returns. The nowcast blends realised variance of the last
+  {_C.past_days} days with the GARCH forecast for the next {_C.ahead_days}:
+  **Calm** below {_C.calm_below:.0%}, **Choppy** up to {_C.turbulent_above:.0%},
+  **Turbulent** above.
+- **To Bull / Sideways / Bear** under the slope is how far it has to move to
+  change the direction label, hysteresis included.
 
-"Bear" is the high-volatility state rather than one with a strongly negative
-average: sell-offs come mixed with sharp rebounds, so its mean is low, not
-necessarily below zero.
+Scored against a hand-labelled ground truth: direction macro recall 0.59,
+volatility 0.81 (chance 0.33). Click the badge to compare it with HMM variants,
+change its settings and look back from any date on the **Market Regime** page.
 """
 
 
@@ -618,7 +634,7 @@ def _alerts_box(_):
         weights_hist = safe(loaders.get_daily_weightings_history)
         alerts = cp.build_alerts(
             today=pd.Timestamp.today().normalize(),
-            regime=safe(_regime), vol=safe(lambda: _vol("SPY")), kpis=safe(_kpis), nav=safe(_nav),
+            regime=safe(_champion_regime), vol=safe(lambda: _vol("SPY")), kpis=safe(_kpis), nav=safe(_nav),
             positions=safe(_positions),
             positions_as_of=weights_hist["date"].max() if weights_hist is not None and len(weights_hist) else None,
             active_exposure=fv["active"] if fv else None,
@@ -660,10 +676,11 @@ times $0.4 + 0.6 \\cdot 0.5^{{age/{cp.RECENCY_HALF_LIFE}}}$, where age is the
 business days since the condition *began*. A fresh orange outranks a month-old
 red, but an old red never falls below a fresh green.
 
-- **Bear regime** (red): HMM puts more than {_L['bear_proba']:.0%} on Bear.
+- **Bear regime** (red): the champion regime model's SPY direction is Bear.
 - **Fund drawdown limit** (red): more than {abs(_L['drawdown']):.0%} below peak.
 - **Position drawdown**: a holding down more than {abs(_L['position_drop']):.0%} over 21 days (red beyond {abs(2 * _L['position_drop']):.0%}).
-- **Regime change** (orange): the most likely state switched within {_L['regime_flip_days']} trading days.
+- **Regime change** (orange): the direction label switched within {_L['regime_flip_days']} trading days.
+- **Turbulent regime** (orange): the champion's SPY volatility nowcast is in its Turbulent band.
 - **Volatility elevated** (orange): SPY's GARCH vol above the {_L['vol_pct']:.0%} percentile of its history.
 - **Volatility expanding** (orange): SPY's 21d realised vol above {_L['vol_expansion']}× its 252d.
 - **Concentration** (orange): a position above {_L['max_position']:.0%} of NAV.
@@ -1061,13 +1078,13 @@ def _regime_cond_box(_):
         if not rid:
             return _box("Strategies by regime", ui.alert("No factor-model run yet.", "yellow"))
         fv = _factor_view(rid)
-        res = _regime()
+        res = _champion_regime()
         long = rg.regime_conditional_returns(fv["strat"], res["state"], periods_per_year(fv["frequency"]))
         if long.empty:
             return _box("Strategies by regime", ui.alert("Not enough overlap between regimes and factor history."))
         piv = long.pivot(index="strategy", columns="regime", values="ann_return").reindex(columns=list(rg.STATES))
         n = long.groupby("regime")["n_periods"].max().reindex(list(rg.STATES))
-        cur = res["current"]["state"]
+        cur = res["current"]["direction"]
         piv = piv.sort_values(cur, ascending=True)
         zmax = float(np.nanmax(np.abs(piv.to_numpy()))) or 1.0
         cols = [f"<b>{s} ◀ now</b>" if s == cur else s for s in piv.columns]
@@ -1083,7 +1100,7 @@ def _regime_cond_box(_):
         fig.update_yaxes(showgrid=False)
         best = piv[cur].dropna().sort_values(ascending=False)
         stats = _stats([
-            ("Now", cur, f"HMM {res['current']['proba'][cur]:.0%}", rg.STATE_COLORS[cur]),
+            ("Now", cur, f"slope {res['current']['slope']:+.0%} / yr", rg.STATE_COLORS[cur]),
             ("Best in regime", best.index[0] if len(best) else "–", _pct(best.iloc[0], 0) + " / yr" if len(best) else "", BARRA_POS),
             ("Worst in regime", best.index[-1] if len(best) else "–", _pct(best.iloc[-1], 0) + " / yr" if len(best) else "", BARRA_NEG),
         ], cols=3)
@@ -1095,7 +1112,7 @@ def _regime_cond_box(_):
 
 
 _COND_TEXT = """
-Each weekly factor return is tagged with the HMM regime that was most likely at
+Each weekly factor return is tagged with the champion model's direction regime at
 the *previous* week's close, so the heatmap answers "given the regime we can see
 now, what has each strategy tended to earn next?" (no look-ahead). Rows are
 sorted by the current regime's column.
