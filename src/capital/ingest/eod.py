@@ -16,7 +16,7 @@ from datetime import date, timedelta
 
 import pandas as pd
 
-from capital.data import store
+from capital.data import loaders, store
 from capital.settings import settings
 
 log = logging.getLogger(__name__)
@@ -150,6 +150,12 @@ def close_lseg_session() -> None:
 
 
 # ── Universe ──────────────────────────────────────────────────────────────────
+
+#: A held position with fewer stored days than this gets its full history fetched.
+#: It is the champion regime model's burn-in; a name genuinely younger than this is
+#: re-fetched nightly until it passes, which costs one small request.
+_MIN_HELD_DAYS = 252
+_HELD_BACKFILL_START = "2016-01-01"
 
 def load_universe() -> pd.DataFrame:
     """Active rows of security_master.csv (local checkout, else the S3 copy)."""
@@ -605,6 +611,25 @@ def probe_fundamental_fields(sample_rics: list[str] | None = None) -> pd.DataFra
     log.info("[PROBE] resolved %d/%d columns; cached to meta.%s",
              len(resolved), len(out), _META_FIELDS_KEY)
     return out
+
+
+def backfill_held(universe: pd.DataFrame | None = None) -> dict:
+    """Fetch full history for held positions the store barely knows.
+
+    The nightly EOD run only covers its lookback window, so a position bought
+    without a manual backfill would hold a few weeks of prices and could not be
+    classified by the regime pages. Run after `run_eod`, this closes that gap by
+    itself.
+    """
+    master = universe if universe is not None else load_universe()
+    cov = store.coverage("eod_prices", "security_id")
+    days = dict(zip(cov["security_id"], cov["n"]))
+    held = loaders.get_held_positions()["security_id"].dropna()
+    short = [s for s in held if days.get(s, 0) < _MIN_HELD_DAYS]
+    if not short:
+        return {"backfilled": 0}
+    log.info("[EOD] backfilling %d held positions with under %d days: %s", len(short), _MIN_HELD_DAYS, short)
+    return run_eod(start=_HELD_BACKFILL_START, universe=master[master["security_id"].isin(short)])
 
 
 # ── Fundamentals ingest ───────────────────────────────────────────────────────

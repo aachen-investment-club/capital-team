@@ -6,6 +6,7 @@ reference S3 paths or the DB file directly.
 from capital.data.loaders import (  # noqa: F401
     data_version,
     get_close_matrix,
+    get_consensus,
     get_data_coverage,
     get_daily_weightings_history,
     get_eod_matrix,
@@ -16,6 +17,7 @@ from capital.data.loaders import (  # noqa: F401
     get_fundamentals_asof,
     get_fundamentals_columns,
     get_fundamentals_matrix,
+    get_held_positions,
     get_market_ohlcv,
     get_market_prices,
     get_portfolio_and_benchmarks,

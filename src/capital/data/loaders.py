@@ -206,6 +206,21 @@ def get_daily_weightings_with_themes() -> pd.DataFrame:
     return _log("daily_weightings_with_themes", df)
 
 
+@cached_by_version
+def get_held_positions() -> pd.DataFrame:
+    """Non-cash positions on the latest weightings date, largest first, with their
+    security_id and ric (NaN if the symbol is not in the master).
+    Columns: symbol, name, theme, ccy, pct_nav, security_id, ric
+    """
+    hist = get_daily_weightings_with_themes()
+    latest = hist[hist["date"] == hist["date"].max()]
+    latest = latest[~latest["symbol"].str.startswith("CASH_") & (latest["pct_nav"] != 0)]
+    master = get_security_master()[["ticker", "security_id", "ric"]]
+    held = latest.merge(master, left_on="symbol", right_on="ticker", how="left")
+    cols = ["symbol", "name", "theme", "ccy", "pct_nav", "security_id", "ric"]
+    return held[cols].sort_values("pct_nav", ascending=False).reset_index(drop=True)
+
+
 def get_theme_mappings() -> pd.DataFrame:
     """Theme/basket assignment per symbol. Columns: symbol, theme"""
     if not settings.ddb_baskets_table:
@@ -342,6 +357,24 @@ def get_market_ohlcv(ticker: str) -> pd.DataFrame:
         })
     except Exception:
         return pd.DataFrame(columns=["close", "volume"])
+
+
+@cached_by_version
+def get_consensus() -> pd.DataFrame:
+    """Latest consensus snapshot per security, empty until the first
+    `capital-ingest consensus` has created the table.
+    Columns: see the `consensus` table in store.py.
+    """
+    if not store.db_exists():
+        return pd.DataFrame()
+    try:
+        df = store.query("SELECT * FROM consensus "
+                         "QUALIFY row_number() OVER (PARTITION BY security_id ORDER BY date DESC) = 1")
+    except duckdb.Error:
+        return pd.DataFrame()
+    for col in ("date", "expected_report_date", "eps_next_q_end", "eps_fy_end", "eps_fy_end_90d"):
+        df[col] = pd.to_datetime(df[col])
+    return _log("consensus", df)
 
 
 @cached_by_version

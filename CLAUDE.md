@@ -55,7 +55,7 @@ or reference S3 paths / the DB file directly:
   `get_eod_matrix(field)`, `get_fundamentals_matrix(field)`,
   `get_fundamentals_asof(dates, columns)` (point-in-time ASOF join),
   `get_fundamentals_columns()` (which descriptor columns the store actually has),
-  `get_fx_rates(base)`
+  `get_fx_rates(base)`, `get_held_positions()`, `get_consensus()` (latest snapshot per held position)
 - S3/DynamoDB reads (the IBKR Lambda's stable outputs):
   `get_portfolio_and_benchmarks()`, `get_daily_weightings_history()`,
   `get_trade_log()`, `get_theme_mappings()`
@@ -143,7 +143,7 @@ deploy/                      # systemd units, nginx conf, server-setup.sh
 
 - Run app (dev): `uv run python -m capital.dashboard.app` (http://127.0.0.1:8050)
 - Serve (prod): `gunicorn -w 1 --threads 4 -b 127.0.0.1:8050 capital.dashboard.app:server`
-- Ingest: `uv run capital-ingest {eod,fund,market,fred,derived,factors,sync,nightly}`
+- Ingest: `uv run capital-ingest {eod,fund,consensus,market,fred,derived,factors,sync,nightly}`
   (`eod --start 2016-01-01` backfills history for newly added securities, or
   rebuilds the whole store from LSEG from scratch)
 - Which LSEG descriptor fields this account can actually fetch:
@@ -166,6 +166,7 @@ re-check with `capital-ingest fund --probe` if the entitlement changes.
   fail with `NotEntitled: PE(3134)`. Index chains are expanded through the
   **Data** service instead: `ld.get_data(universe=["0#.STOXX"], fields=[...])`
   returns every constituent *and* its reference data in one request.
+- News: `ld.news.get_headlines` fails with `ScopeError` (needs `trapi.data.news.read`).
 - `TR.ISIN` and `TR.PriceCurrency` — access denied. New master rows therefore
   carry a blank ISIN (the RIC is the join key everywhere that matters) and derive
   currency from the RIC's exchange suffix.
@@ -195,6 +196,8 @@ only as a logged fallback.
   `asset_type` decides how the factor model treats it: `COMMON` goes into the
   cross-sectional estimation universe, `ETF` is priced off the finished model by
   time-series regression, `INDEX` is excluded entirely.
+  A *held* position with under 252 days of history is back-filled by the nightly
+  run automatically (`eod.backfill_held`), once its row is in the master.
 - **Grow the screening universe** (see "LSEG entitlements" below for what works):
 
   ```

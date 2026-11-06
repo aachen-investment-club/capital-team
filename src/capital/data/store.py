@@ -57,6 +57,24 @@ CREATE TABLE IF NOT EXISTS fred (
     value     DOUBLE,
     PRIMARY KEY (series_id, date)
 );
+-- Dated snapshots of analyst consensus for held positions (`capital-ingest consensus`)
+CREATE TABLE IF NOT EXISTS consensus (
+    security_id          TEXT NOT NULL,
+    date                 DATE NOT NULL,
+    expected_report_date DATE,
+    eps_next_q           DOUBLE,
+    eps_next_q_end       DATE,
+    eps_fy               DOUBLE,
+    eps_ccy              TEXT,
+    rec_label            TEXT,
+    n_analysts           DOUBLE,
+    price_target         DOUBLE,
+    n_targets            DOUBLE,
+    target_ccy           TEXT,
+    price                DOUBLE,
+    price_ccy            TEXT,
+    PRIMARY KEY (security_id, date)
+);
 CREATE TABLE IF NOT EXISTS meta (
     key   TEXT PRIMARY KEY,
     value TEXT
@@ -103,6 +121,17 @@ MIGRATIONS = [
         "debt_to_assets",    # retired: not entitled on our LSEG account
         "revenue_ttm",       # level; growth is derived from the series
         "eps_ttm",           # level; growth is derived from the series
+    )
+] + [
+    f"ALTER TABLE consensus ADD COLUMN IF NOT EXISTS {col} {kind}"
+    for col, kind in (
+        *[(c, "DOUBLE") for c in (
+            "target_high", "target_low", "target_std", "eps_fy_std",
+            "n_strong_buy", "n_buy", "n_hold", "n_sell", "n_strong_sell",
+            "rec_mean", "rec_mean_90d", "target_30d", "target_90d", "eps_fy_30d", "eps_fy_90d",
+        )],
+        ("eps_fy_end", "DATE"),
+        ("eps_fy_end_90d", "DATE"),
     )
 ]
 

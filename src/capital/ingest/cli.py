@@ -4,12 +4,13 @@ capital-ingest — nightly data pipeline CLI (runs on the dashboard server).
 Subcommands:
     eod       LSEG EOD OHLCV → store          (--start / --days for backfill)
     fund      LSEG fundamentals → store        (--start / --days)
+    consensus LSEG analyst consensus and report dates for held positions → store
     market    yfinance market tickers → store  (--days)
     fred      FRED series → store
     derived   rebuild derived tables (daily_returns, rolling_stats)
     factors   estimate the nightly cross-sectional factor model
     sync      back up market.duckdb to S3
-    nightly   eod → fund → market → fred → derived → factors → sync, with pings
+    nightly   eod → fund → consensus → market → fred → derived → factors → sync, with pings
 
 The IBKR fund-data ingestion is a separate, independently maintained Lambda —
 deliberately not part of this CLI.
@@ -35,7 +36,7 @@ def _ping(suffix: str = "") -> None:
 
 
 def _run_nightly(args) -> int:
-    from capital.ingest import derived, eod, factors, market, sync
+    from capital.ingest import consensus, derived, eod, factors, market, sync
 
     _ping("/start")
     failures: list[str] = []
@@ -55,7 +56,9 @@ def _run_nightly(args) -> int:
     try:
         universe = eod.load_universe()
         eod_result = step("eod", eod.run_eod, universe=universe)
+        step("held backfill", eod.backfill_held, universe=universe)
         step("fundamentals", eod.run_fundamentals, universe=universe)
+        step("consensus", consensus.run_consensus)
     finally:
         eod.close_lseg_session()
 
@@ -106,6 +109,8 @@ def main(argv: list[str] | None = None) -> int:
                         help="resolve which TR field delivers each descriptor on "
                              "this entitlement, cache the answer, and write no data")
 
+    sub.add_parser("consensus", help="LSEG consensus for held positions → store")
+
     p_market = sub.add_parser("market", help="yfinance market tickers → store")
     p_market.add_argument("--days", type=int)
 
@@ -144,6 +149,14 @@ def main(argv: list[str] | None = None) -> int:
                 result = eod_mod.run_fundamentals(start=args.start, days=args.days,
                                                   resume=args.resume,
                                                   batch_size=args.batch_size)
+        finally:
+            eod_mod.close_lseg_session()
+    elif args.cmd == "consensus":
+        from capital.ingest import consensus as consensus_mod
+        from capital.ingest import eod as eod_mod
+        eod_mod.open_lseg_session()
+        try:
+            result = consensus_mod.run_consensus()
         finally:
             eod_mod.close_lseg_session()
     elif args.cmd == "market":
