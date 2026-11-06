@@ -22,16 +22,23 @@ from dash import Input, Output, callback, dcc, html
 from capital.analytics import control_panel as cp
 from capital.analytics import regime as rg
 from capital.analytics.regime import champion as ch
+from capital.analytics.regime import positions
 from capital.analytics.factors import regression as reg
 from capital.analytics.factors import risk as riskmod
 from capital.analytics.factors.risk import periods_per_year
 from capital.analytics.factors.spec import STYLES
 from capital.analytics.volatility import log_returns_pct
 from capital.dashboard import components as ui
+from capital.dashboard.panel import DIRECTION_BADGE, alert_badges, alert_list, regime_figure
+from capital.dashboard.panel import box as _box
+from capital.dashboard.panel import fail as _fail
+from capital.dashboard.panel import graph as _graph
+from capital.dashboard.panel import info as _info
+from capital.dashboard.panel import stats as _stats
 from capital.data import factor_store as fstore
 from capital.data import loaders
 from capital.data.cache import cached_by_version
-from capital.theme import BARRA_NEG, BARRA_POS, BARRA_SCALE, GRAPH_CONFIG, NAVY, TEXT_MUTED
+from capital.theme import BARRA_NEG, BARRA_POS, BARRA_SCALE, NAVY, TEXT_MUTED
 
 dash.register_page(
     __name__, path="/control-panel", name="Control Panel", order=0.5,
@@ -45,7 +52,6 @@ GOLD, SAGE, SLATE, STEEL = "#B8962E", "#2E7D6B", "#94A3B8", "#3A6B9C"
 #: always means the same asset.
 ASSET_COLORS = {"SPY": NAVY, "QQQ": STEEL, "IWM": GOLD, "TLT": SAGE, "HYG": "#A0522D", "GLD": "#7B6FA0"}
 W = cp.WINDOW
-H = 170  # default chart height inside a box, so boxes in one row line up
 
 
 # ── Formatting ────────────────────────────────────────────────────────────────
@@ -68,65 +74,6 @@ def _tone(x) -> str:
 
 def _date(ts) -> str:
     return "–" if ts is None or pd.isna(ts) else f"{pd.Timestamp(ts):%d %b %Y}"
-
-
-def _stat(label: str, value: str, hint: str = "", color: str = NAVY) -> html.Div:
-    """A small stat: muted label, bold value, optional hint. Much denser than
-    ui.metric, so a box can carry eight of them in two short rows."""
-    return html.Div([
-        dmc.Text(label, size="9px", c=TEXT_MUTED, fw=600, tt="uppercase", lh=1.15),
-        dmc.Text(value, size="sm", fw=700, c=color, lh=1.2),
-        dmc.Text(hint, size="9px", c=TEXT_MUTED, lh=1.15) if hint else None,
-    ], style={"minWidth": 0})
-
-
-def _stats(items: list, cols: dict | int) -> dmc.SimpleGrid:
-    return dmc.SimpleGrid([_stat(*i) for i in items], cols=cols, spacing=6, verticalSpacing=3)
-
-
-def _info(md: str) -> dmc.HoverCard:
-    """ℹ icon whose hover card holds the box's methodology (markdown + maths)."""
-    return dmc.HoverCard([
-        dmc.HoverCardTarget(dmc.ThemeIcon("ℹ", variant="light", radius="xl", size="sm",
-                                          style={"cursor": "help"})),
-        dmc.HoverCardDropdown(dcc.Markdown(md, mathjax=True, className="explain-body"),
-                              maw=440, fz="sm"),
-    ], position="bottom-end", shadow="md", openDelay=150, withinPortal=True)
-
-
-def _box(title: str, body, subtitle: str = "", info: str | None = None, right=None) -> dmc.Paper:
-    """One theme = one box: a single-line header (title, subtitle, controls, ℹ) over the body."""
-    head = dmc.Group([
-        dmc.Group([dmc.Text(title, fw=700, c=NAVY, size="xs"),
-                   dmc.Text(subtitle, size="10px", c=TEXT_MUTED, truncate="end",
-                            style={"minWidth": 0, "flex": 1})] if subtitle else
-                  [dmc.Text(title, fw=700, c=NAVY, size="xs")],
-                  gap=8, wrap="nowrap", style={"minWidth": 0, "flex": 1}),
-        dmc.Group([x for x in (right, _info(info) if info else None) if x is not None],
-                  gap=6, wrap="nowrap"),
-    ], justify="space-between", wrap="nowrap", gap="xs")
-    return dmc.Paper(dmc.Stack([head, body], gap=3), withBorder=True, radius="md", p=8, h="100%")
-
-
-def _fail(title: str) -> dmc.Paper:
-    return _box(title, dmc.Alert(dmc.Code(traceback.format_exc(), block=True),
-                                 color="red", variant="light", title=f"{title} failed"))
-
-
-def _graph(fig: go.Figure, height: int = H, legend: bool = False, left: int = 40,
-           right: int = 10, bottom: int = 22) -> dcc.Graph:
-    """A compact chart for a box. Size `left` with ui.axis_margin on categorical
-    y axes so long labels are not clipped."""
-    fig.update_layout(
-        height=height, margin=dict(l=left, r=right, t=18 if legend else 4, b=bottom),
-        showlegend=legend, font=dict(size=10),
-        legend=dict(orientation="h", yanchor="bottom", y=1.0, xanchor="left", x=0,
-                    font=dict(size=9), borderwidth=0) if legend else None,
-    )
-    fig.update_xaxes(tickfont=dict(size=9), title_font=dict(size=9))
-    fig.update_yaxes(tickfont=dict(size=9), title_font=dict(size=9))
-    return dcc.Graph(figure=fig, config={**GRAPH_CONFIG, "displayModeBar": False},
-                     style={"height": f"{height}px"})
 
 
 def _hbar(values: pd.Series, labels, custom=None, hover: str = "%{y}: %{x:+.1%}<extra></extra>",
@@ -506,73 +453,19 @@ _REGIME_DAYS = cp.LONG
 _C = ch.CHAMPION
 
 
-def _regime_bands(fig: go.Figure, labels: pd.Series, colors: dict, row: int, secondary_y=None) -> None:
-    """One full-height bar per day on a hidden 0–1 axis, coloured by that day's
-    label. Bars (not shapes) so the shading is exact per day and survives the
-    weekend rangebreaks without gaps."""
-    for s, color in colors.items():
-        on = (labels == s).astype(float).replace(0.0, np.nan)
-        kw = {"secondary_y": secondary_y} if secondary_y is not None else {}
-        fig.add_trace(go.Bar(x=labels.index, y=on, name=s, marker_color=color, opacity=0.28,
-                             hoverinfo="skip", width=86_400_000, showlegend=row == 1),
-                      row=row, col=1, **kw)
-
-
 @callback(Output("cp-regime", "children"), Input("cp-init", "data"))
 def _regime_box(_):
     try:
-        from plotly.subplots import make_subplots
-
         res = _champion_regime()
         cur = res["current"]
         reg = res["reg"].tail(_REGIME_DAYS)
-        state, vol_state = reg["direction_name"], reg["volatility_name"]
         spy = loaders.get_market_prices("SPY").reindex(reg.index).ffill()
 
-        # Row 1: SPY over direction shading. Row 2: the trend slope against the
-        # Bull / Bear lines. Row 3: the vol nowcast over volatility shading.
-        fig = make_subplots(rows=3, cols=1, shared_xaxes=True, row_heights=[0.56, 0.22, 0.22],
-                            vertical_spacing=0.03, specs=[[{"secondary_y": True}], [{}], [{"secondary_y": True}]])
-        _regime_bands(fig, state, rg.STATE_COLORS, 1, secondary_y=False)
-        fig.add_trace(go.Scatter(
-            x=spy.index, y=spy, name="SPY", line=dict(color=NAVY, width=1.8), showlegend=False,
-            customdata=np.column_stack([state, vol_state]),
-            hovertemplate="%{x|%d %b %Y}  SPY %{y:.2f}<br>%{customdata[0]} · %{customdata[1]}<extra></extra>"),
-            row=1, col=1, secondary_y=True)
-
-        fig.add_trace(go.Scatter(
-            x=reg.index, y=reg["slope"], name="Trend slope", showlegend=False,
-            line=dict(color=NAVY, width=1.4),
-            hovertemplate="%{x|%d %b %Y}  slope %{y:+.0%}/yr<extra></extra>"), row=2, col=1)
-        for line, color in ((_C.bull_slope, rg.STATE_COLORS["Bull"]), (_C.bear_slope, rg.STATE_COLORS["Bear"])):
-            fig.add_hline(y=line, line_dash="dot", line_color=color, line_width=1, row=2, col=1)
-
-        _regime_bands(fig, vol_state, ch.VOL_COLORS, 3, secondary_y=False)
-        fig.add_trace(go.Scatter(
-            x=reg.index, y=reg["vol_nowcast"], name="Vol nowcast", showlegend=False,
-            line=dict(color=NAVY, width=1.4),
-            hovertemplate="%{x|%d %b %Y}  vol %{y:.0%}<extra></extra>"), row=3, col=1, secondary_y=True)
-
-        fig.update_layout(barmode="overlay", bargap=0, legend=dict(traceorder="normal"))
-        fig.update_yaxes(range=[0, 1], visible=False, row=1, col=1, secondary_y=False)
-        fig.update_yaxes(range=[0, 1], visible=False, row=3, col=1, secondary_y=False)
-        lo, hi = float(spy.min()), float(spy.max())
-        pad = (hi - lo) * 0.05
-        fig.update_yaxes(range=[lo - pad, hi + pad], side="left", showgrid=True, tickprefix="$",
-                         row=1, col=1, secondary_y=True)
-        fig.update_yaxes(tickformat="+.0%", showgrid=False, title_text="slope", row=2, col=1)
-        fig.update_yaxes(tickformat=".0%", showgrid=False, side="left", title_text="vol",
-                         row=3, col=1, secondary_y=True)
-        # Skip weekends and market holidays (weekdays with no SPY close), so the
-        # shading runs unbroken from one trading day to the next.
-        holidays = pd.bdate_range(reg.index[0], reg.index[-1]).difference(reg.index)
-        fig.update_xaxes(rangebreaks=[dict(bounds=["sat", "mon"]),
-                                      dict(values=[d.strftime("%Y-%m-%d") for d in holidays])],
-                         showgrid=False)
+        fig = regime_figure(reg, spy, "SPY", _C.bull_slope, _C.bear_slope, tickprefix="$")
 
         d, v = cur["direction"], cur["volatility"]
         badge = dmc.Badge(f"{d} · {v}", variant="filled",
-                          color={"Bull": "teal", "Sideways": "blue", "Bear": "red"}[d], size="md")
+                          color=DIRECTION_BADGE[d], size="md")
         stats = _stats([
             ("Direction", d, f"{cur['days_direction']}d in regime", rg.STATE_COLORS[d]),
             ("Trend slope", f"{cur['slope']:+.0%} / yr",
@@ -614,13 +507,6 @@ change its settings and look back from any date on the **Market Regime** page.
 
 # ── Alerts ────────────────────────────────────────────────────────────────────
 
-_ALERT_COLOR = {"red": "#C0392B", "orange": "#E67E22", "green": "#2E7D6B"}
-
-
-def _age(bd: int) -> str:
-    return "today" if bd == 0 else f"{bd}d ago"
-
-
 @callback(Output("cp-alerts", "children"), Input("cp-init", "data"))
 def _alerts_box(_):
     try:
@@ -641,30 +527,11 @@ def _alerts_box(_):
             leaderboard=fv["board"] if fv else None,
             factor_end=fv["end"] if fv else None,
             freshness=_freshness(),
+            holdings=safe(positions.position_book),
         )
-        counts = {lvl: sum(a["level"] == lvl for a in alerts) for lvl in _ALERT_COLOR}
-        right = dmc.Group([dmc.Badge(str(n), color={"red": "red", "orange": "orange", "green": "teal"}[lvl],
-                                     variant="filled", size="sm", circle=True)
-                           for lvl, n in counts.items() if n], gap=3)
-        if not alerts:
-            body = dmc.Center(dmc.Stack([dmc.Text("All clear", fw=700, c=POS),
-                                         dmc.Text("Every rule is inside its limit.", size="xs", c=TEXT_MUTED)],
-                                        gap=0, align="center"), h=150)
-        else:
-            rows = [html.Div([
-                html.Span(style={"width": 4, "alignSelf": "stretch", "borderRadius": 2, "flex": "0 0 4px",
-                                 "background": _ALERT_COLOR[a["level"]]}),
-                html.Div([
-                    dmc.Group([dmc.Text(a["title"], size="xs", fw=700, c=NAVY, lh=1.25, truncate="end",
-                                        style={"flex": 1, "minWidth": 0}),
-                               dmc.Text(_age(a["age_bd"]), size="10px", c=TEXT_MUTED, style={"flex": "0 0 auto"})],
-                              justify="space-between", gap=4, wrap="nowrap"),
-                    dmc.Text(a["detail"], size="11px", c=TEXT_MUTED, lh=1.25),
-                ], style={"flex": 1, "minWidth": 0}),
-            ], style={"display": "flex", "gap": 7, "padding": "4px 0", "borderBottom": "1px solid #EEF2F7"})
-                for a in alerts]
-            body = dmc.ScrollArea(html.Div(rows), h=245, type="auto", offsetScrollbars=True)
-        return _box("Alerts", body, "by relevance × recency", _ALERT_TEXT, right=right)
+        right = dmc.Group([dcc.Link(dmc.Text("Positions →", size="10px", c=TEXT_MUTED), href="/position-regimes"),
+                           alert_badges(alerts)], gap=6, wrap="nowrap")
+        return _box("Alerts", alert_list(alerts), "by relevance × recency", _ALERT_TEXT, right=right)
     except Exception:  # noqa: BLE001
         return _fail("Alerts")
 
@@ -685,6 +552,7 @@ red, but an old red never falls below a fresh green.
 - **Volatility expanding** (orange): SPY's 21d realised vol above {_L['vol_expansion']}× its 252d.
 - **Concentration** (orange): a position above {_L['max_position']:.0%} of NAV.
 - **Stale data** (orange): market or NAV more than {_L['stale_bdays']} business days old, factor run more than {_L['stale_model_days']} days.
+- **Holdings** (the **Position Regimes** page): the champion on each position, in that stock's own lines. **Bear** (red at {_L['holding_bear_red']:.0%} of NAV or more, otherwise orange), **Regime change** within {_L['regime_flip_days']} trading days, **Turbulent**, and **Vol expanding** (21d realised above {_L['vol_expansion']}× its 252d), all orange.
 - **Tilt against the tape** (green): active exposure of at least {_L['exposure_z']}σ to a factor that cost us money over 21 days.
 
 Thresholds live in `capital.analytics.control_panel.LIMITS`.

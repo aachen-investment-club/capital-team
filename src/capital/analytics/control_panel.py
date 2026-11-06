@@ -389,6 +389,7 @@ LIMITS = {
     "vol_pct": 0.80,            # GARCH vol above its own 80th percentile
     "vol_expansion": 1.5,       # 21d realised above 1.5x the 252d realised
     "regime_flip_days": 5,      # regime changed within the last week
+    "holding_bear_red": 0.05,   # a Bear position this share of NAV or larger is red
     "exposure_z": 0.5,          # |active exposure| worth flagging
     "stale_bdays": 3,           # data older than 3 business days
     "stale_model_days": 10,     # factor run older than 10 calendar days
@@ -421,7 +422,8 @@ def build_alerts(*, today: pd.Timestamp, regime: dict | None, vol: dict | None,
                  kpis: dict | None, nav: pd.Series | None, positions: pd.DataFrame | None,
                  positions_as_of: pd.Timestamp | None, active_exposure: pd.Series | None,
                  leaderboard: pd.DataFrame | None, factor_end: pd.Timestamp | None,
-                 freshness: dict[str, pd.Timestamp | None]) -> list[dict]:
+                 freshness: dict[str, pd.Timestamp | None],
+                 holdings: list[dict] | None = None) -> list[dict]:
     """Rule-based flags ranked by relevance x recency.
 
     Each alert: level (red/orange/green), title, detail, since (when the
@@ -503,10 +505,49 @@ def build_alerts(*, today: pd.Timestamp, regime: dict | None, vol: dict | None,
                     f"Active {x:+.2f}σ to {factor}; {name[factor]} returned {ret[factor]:+.2%} over {WINDOW}d.",
                     factor_end)
 
-    for a in out:
+    return _rank(out + _holding_rules(holdings or []), today)
+
+
+def _holding_rules(book: list[dict]) -> list[dict]:
+    """The regime rules on each position of `regime.positions.position_book`, in
+    that stock's own lines. Bear covers a fresh flip into Bear and Turbulent covers
+    vol expanding, so a position raises one alert per axis."""
+    L = LIMITS
+    out: list[dict] = []
+    for h in book:
+        cur, sym = h["cur"], h["symbol"]
+        if cur is None:
+            continue
+
+        def add(level, title, detail, since):
+            out.append({"level": level, "title": title, "detail": f"{detail} {h['weight']:.1%} of NAV.",
+                        "since": since, "symbol": sym})
+
+        reg, d = h["reg"], cur["direction"]
+        run_start = _streak_start(reg["direction_name"] == d)
+        if d == "Bear":
+            add("red" if h["weight"] >= L["holding_bear_red"] else "orange", f"Bear: {sym}",
+                f"Trend slope {cur['slope']:+.0%}/yr, below its {cur['bear_line']:+.0%} line.", run_start)
+        elif d is not None and cur["days_direction"] <= L["regime_flip_days"]:
+            add("orange", f"Regime change: {sym} → {d}",
+                f"Switched {cur['days_direction']}d ago; trend slope {cur['slope']:+.0%}/yr.", run_start)
+
+        rv21, rv252 = h["rv_window"], h["rv_long"]
+        if cur["volatility"] == "Turbulent":
+            add("orange", f"Turbulent: {sym}",
+                f"Vol nowcast {cur['vol_nowcast']:.0%}, above its {cur['turbulent_line']:.0%} line.",
+                _streak_start(reg["volatility_name"] == "Turbulent"))
+        elif rv21.iloc[-1] > L["vol_expansion"] * rv252.iloc[-1]:
+            add("orange", f"Vol expanding: {sym}", f"21d realised {rv21.iloc[-1]:.0%} vs 252d {rv252.iloc[-1]:.0%}.",
+                _streak_start(rv21 > L["vol_expansion"] * rv252))
+    return out
+
+
+def _rank(alerts: list[dict], today: pd.Timestamp) -> list[dict]:
+    for a in alerts:
         a["age_bd"] = _bdays_between(min(a["since"], today), today)
         a["score"] = LEVEL_WEIGHT[a["level"]] * (0.4 + 0.6 * 0.5 ** (a["age_bd"] / RECENCY_HALF_LIFE))
-    return sorted(out, key=lambda a: (-a["score"], a["age_bd"]))
+    return sorted(alerts, key=lambda a: (-a["score"], a["age_bd"]))
 
 
 # ── Scorecard: fund vs SPY ────────────────────────────────────────────────────

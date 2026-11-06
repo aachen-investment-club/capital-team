@@ -3,6 +3,8 @@ Market regime models.
 
 - `champion` : the production model (Kalman trend slope x GJR-GARCH vol
   nowcast). Drives the Control Panel.
+- `positions`: the champion on each holding, in lines scaled to that stock's own
+  vol. Drives the Position Regimes page and the Control Panel's holding alerts.
 - `hmm`      : the 3-state Gaussian HMM with filtered probabilities and the
   regime-conditional return table.
 - `compare`  : the model zoo (champion, HMM variants, SMA baseline), point-in-
